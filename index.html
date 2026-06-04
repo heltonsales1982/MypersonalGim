@@ -1933,6 +1933,34 @@ async function renderFeatures(){
   }
 
   featuresGrid.innerHTML = html;
+
+  // Listener para atualização automática (sincronização com admin)
+  const session = getUserSession();
+  if(session){
+    firebase.database().ref('gymai_features/' + session.tokenKey).on('value', async (snapshot) => {
+      const userFeatures = snapshot.val() || {};
+      let html = '';
+      for(const [key, feature] of Object.entries(FEATURES)){
+        const isOwned = userFeatures[key] === true;
+        const isFree = feature.price === 0;
+        html += '<div class="feature-card '+(isOwned?'unlocked':'locked')+'">';
+        html += '<div class="feature-header">';
+        html += '<div class="feature-name">'+feature.name+'</div>';
+        html += '<div class="feature-price">'+(isFree?'Grátis':'R$ '+feature.price)+'</div>';
+        html += '</div>';
+        html += '<div class="feature-desc">'+feature.description+'</div>';
+        if(isOwned){
+          html += '<button class="feature-btn owned">Adquirido ✓</button>';
+        } else if(isFree){
+          html += '<button class="feature-btn buy" onclick="activateFreeFeature(\''+key+'\')">Ativar</button>';
+        } else {
+          html += '<button class="feature-btn buy" onclick="buyFeature(\''+key+'\')">Comprar</button>';
+        }
+        html += '</div>';
+      }
+      featuresGrid.innerHTML = html;
+    });
+  }
 }
 
 async function activateFreeFeature(featureId){

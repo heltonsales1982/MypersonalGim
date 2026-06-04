@@ -845,35 +845,44 @@ async function loadUserFeatures(){
     const snapshot = await firebase.database().ref('gymai_features/' + tokenKey).once('value');
     const userFeatures = snapshot.val() || {};
 
-    const container = document.getElementById('user-features-list');
-    let html = '';
+    renderUserFeaturesList(tokenKey, userFeatures);
 
-    for(const [key, feature] of Object.entries(FEATURES)){
-      const isActive = userFeatures[key] === true;
-      const isFree = feature.price === 0;
-
-      html += '<div class="feature-item">';
-      html += '<div class="feature-info">';
-      html += '<div class="feature-name">' + feature.name + '</div>';
-      html += '<div class="feature-desc">' + feature.description + '</div>';
-      html += '<div class="feature-price">' + (isFree ? 'Grátis' : 'R$ ' + feature.price.toFixed(2)) + '</div>';
-      html += '</div>';
-      html += '<div class="feature-action">';
-      if(isActive){
-        html += '<button class="act-btn danger" onclick="toggleFeature(\'' + tokenKey + '\', \'' + key + '\', false)">Desativar</button>';
-      } else {
-        html += '<button class="act-btn" onclick="toggleFeature(\'' + tokenKey + '\', \'' + key + '\', true)">Ativar</button>';
-      }
-      html += '</div>';
-      html += '</div>';
-    }
-
-    container.innerHTML = html;
-    document.getElementById('user-features-container').style.display = 'block';
-
+    // Listener para atualização automática (sincronização com index)
+    firebase.database().ref('gymai_features/' + tokenKey).on('value', (snapshot) => {
+      const userFeatures = snapshot.val() || {};
+      renderUserFeaturesList(tokenKey, userFeatures);
+    });
   } catch(e) {
     console.error('Erro ao carregar features do usuário:', e);
   }
+}
+
+function renderUserFeaturesList(tokenKey, userFeatures){
+  const container = document.getElementById('user-features-list');
+  let html = '';
+
+  for(const [key, feature] of Object.entries(FEATURES)){
+    const isActive = userFeatures[key] === true;
+    const isFree = feature.price === 0;
+
+    html += '<div class="feature-item">';
+    html += '<div class="feature-info">';
+    html += '<div class="feature-name">' + feature.name + '</div>';
+    html += '<div class="feature-desc">' + feature.description + '</div>';
+    html += '<div class="feature-price">' + (isFree ? 'Grátis' : 'R$ ' + feature.price.toFixed(2)) + '</div>';
+    html += '</div>';
+    html += '<div class="feature-action">';
+    if(isActive){
+      html += '<button class="act-btn danger" onclick="toggleFeature(\'' + tokenKey + '\', \'' + key + '\', false)">Desativar</button>';
+    } else {
+      html += '<button class="act-btn" onclick="toggleFeature(\'' + tokenKey + '\', \'' + key + '\', true)">Ativar</button>';
+    }
+    html += '</div>';
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+  document.getElementById('user-features-container').style.display = 'block';
 }
 
 async function toggleFeature(tokenKey, featureId, activate){
