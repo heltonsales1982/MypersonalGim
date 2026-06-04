@@ -261,6 +261,15 @@ select option{background:var(--bg2)}
 @media(max-width:768px){
   .hamburger-btn{display:flex}
 }
+
+/* ── RELATÓRIOS ── */
+.report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.report-date{font-size:14px;color:var(--muted)}
+.report-period{font-size:12px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+.report-section{margin-bottom:1.5rem}
+.report-section h4{font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:1rem}
+.report-summary{font-size:13px;color:var(--muted);line-height:1.6}
+.report-summary strong{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -620,6 +629,31 @@ select option{background:var(--bg2)}
       </div>
     </div>
 
+    <!-- RELATÓRIOS -->
+    <div class="page" id="pg-relatorios">
+      <h2 class="page-title"><i class="ti ti-chart-bar"></i> Relatórios de Progresso</h2>
+      <p class="page-sub">Acompanhe sua evolução com relatórios detalhados</p>
+
+      <div class="card">
+        <h3>Gerar Relatório</h3>
+        <div class="field-group">
+          <label>Período</label>
+          <select id="report-period">
+            <option value="weekly">Semanal (últimos 7 dias)</option>
+            <option value="monthly">Mensal (últimos 30 dias)</option>
+          </select>
+        </div>
+        <button class="btn-accent" onclick="gerarRelatorio()">Gerar Relatório</button>
+      </div>
+
+      <div id="report-container" style="display:none">
+        <div class="card">
+          <h3 id="report-title">Relatório</h3>
+          <div id="report-content"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- SCANNER CORPORAL -->
     <div class="page" id="pg-scanner">
       <h2 class="page-title"><i class="ti ti-camera"></i> Scanner Corporal IA</h2>
@@ -687,6 +721,7 @@ select option{background:var(--bg2)}
       <button class="sidebar-item" onclick="toggleSidebar();goPage('log',2)"><i class="ti ti-plus-circle"></i>Log de Treino</button>
       <button class="sidebar-item" onclick="toggleSidebar();goPage('scanner',5)"><i class="ti ti-camera"></i>Scanner Corporal</button>
       <button class="sidebar-item" onclick="toggleSidebar();goPage('features',6)"><i class="ti ti-crown"></i>Features Premium</button>
+      <button class="sidebar-item" onclick="toggleSidebar();goPage('relatorios',8)"><i class="ti ti-chart-bar"></i>Relatórios</button>
     </div>
   </div>
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -2763,6 +2798,158 @@ async function loadAnalysisHistory(){
 
   } catch(e) {
     console.error('Erro ao carregar histórico:', e);
+  }
+}
+
+// ══════════════════════════════════════════════
+// RELATÓRIOS
+// ══════════════════════════════════════════════
+async function gerarRelatorio(){
+  const period = document.getElementById('report-period').value;
+  const days = period === 'weekly' ? 7 : 30;
+  const startDate = Date.now() - (days * 24 * 60 * 60 * 1000);
+
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    // Coletar dados de treinos
+    const logSnapshot = await firebase.database().ref('gymai_log/' + session.tokenKey).once('value');
+    const logs = logSnapshot.val() || {};
+
+    let totalSeries = 0;
+    let totalVolume = 0;
+    let treinoDays = new Set();
+
+    Object.values(logs).forEach(diaLogs => {
+      if(typeof diaLogs === 'object' && diaLogs !== null) {
+        const diaTimestamp = Object.keys(diaLogs)[0];
+        if(parseInt(diaTimestamp) >= startDate){
+          treinoDays.add(new Date(parseInt(diaTimestamp)).toLocaleDateString('pt-BR'));
+          Object.values(diaLogs).forEach(log => {
+            totalSeries += log.s || 1;
+            totalVolume += (log.c || 0) * (log.s || 1) * (log.r || 1);
+          });
+        }
+      }
+    });
+
+    // Coletar dados de dias de treino
+    const diasSnapshot = await firebase.database().ref('gymai_dias_treino/' + session.tokenKey).once('value');
+    const diasTreino = diasSnapshot.val() || {};
+    const diasMarcados = Object.values(diasTreino).filter(d => d.timestamp >= startDate).length;
+
+    // Coletar medidas corporais
+    const medidasSnapshot = await firebase.database().ref('gymai_medidas/' + session.tokenKey).once('value');
+    const medidas = medidasSnapshot.val();
+
+    // Coletar metas
+    const metasSnapshot = await firebase.database().ref('gymai_metas/' + session.tokenKey).once('value');
+    const metas = metasSnapshot.val();
+
+    // Gerar relatório
+    const reportTitle = period === 'weekly' ? 'Relatório Semanal' : 'Relatório Mensal';
+    const reportDate = new Date().toLocaleDateString('pt-BR', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'});
+
+    let html = `
+      <div class="report-header">
+        <div class="report-date">${reportDate}</div>
+        <div class="report-period">${period === 'weekly' ? 'Últimos 7 dias' : 'Últimos 30 dias'}</div>
+      </div>
+
+      <div class="report-section">
+        <h4>📊 Estatísticas de Treino</h4>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-label">Dias de treino</div>
+            <div class="stat-value">${treinoDays.size}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Total de séries</div>
+            <div class="stat-value">${totalSeries}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Volume total</div>
+            <div class="stat-value">${Math.round(totalVolume)} <small>kg</small></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Check-ins</div>
+            <div class="stat-value">${diasMarcados}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if(medidas){
+      html += `
+        <div class="report-section">
+          <h4>📏 Medidas Corporais</h4>
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="stat-label">Peso</div>
+              <div class="stat-value">${medidas.peso || '--'} <small>kg</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Altura</div>
+              <div class="stat-value">${medidas.altura || '--'} <small>cm</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cintura</div>
+              <div class="stat-value">${medidas.cintura || '--'} <small>cm</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Peito</div>
+              <div class="stat-value">${medidas.peito || '--'} <small>cm</small></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if(metas){
+      html += `
+        <div class="report-section">
+          <h4>🎯 Metas</h4>
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="stat-label">Meta de passos</div>
+              <div class="stat-value">${metas.passos || '--'}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Meta de água</div>
+              <div class="stat-value">${metas.agua || '--'} <small>ml</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Meta de sono</div>
+              <div class="stat-value">${metas.sono || '--'} <small>h</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Meta de treino</div>
+              <div class="stat-value">${metas.treino || '--'} <small>min</small></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="report-section">
+        <h4>📈 Progresso</h4>
+        <div class="report-summary">
+          <p>Você treinou em <strong>${treinoDays.size}</strong> dias no período, completando <strong>${totalSeries}</strong> séries com um volume total de <strong>${Math.round(totalVolume)}kg</strong>.</p>
+          ${diasMarcados > 0 ? `<p>Fez <strong>${diasMarcados}</strong> check-ins de treino com localização registrada.</p>` : ''}
+          <p>Continue assim para alcançar seus objetivos! 💪</p>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('report-title').textContent = reportTitle;
+    document.getElementById('report-content').innerHTML = html;
+    document.getElementById('report-container').style.display = 'block';
+
+  } catch(e) {
+    console.error('Erro ao gerar relatório:', e);
+    alert('Erro ao gerar relatório');
   }
 }
 
