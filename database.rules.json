@@ -1,0 +1,87 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "gymai_tokens": {
+      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".write": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)"
+    },
+    
+    "gymai_features": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)"
+      }
+    },
+    
+    "gymai_requests": {
+      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".write": "auth != null"
+    },
+    
+    "gymai_log": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_profile": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_medidas": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_metas": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_treinos": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_dietas": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_jejum_sono": {
+      "$tokenKey": {
+        ".read": "auth != null && (auth.token.email == $tokenKey || auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+        ".write": "auth != null && auth.token.email == $tokenKey"
+      }
+    },
+    
+    "gymai_chat_sessions": {
+      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".write": "auth != null"
+    },
+    
+    "gymai_purchases": {
+      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".write": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)"
+    },
+    
+    "gymai_logins": {
+      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".write": "auth != null"
+    }
+  }
+}
