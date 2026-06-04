@@ -127,6 +127,22 @@ select option{background:var(--bg2)}
 .chip{padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);cursor:pointer;background:var(--bg3);transition:all 0.15s}
 .chip:hover,.chip.selected{border-color:var(--accent);color:var(--accent);background:rgba(200,240,74,0.08)}
 
+/* ── FEATURES ── */
+.page-title{font-size:1.3rem;font-family:var(--font-head);font-weight:700;margin-bottom:0.5rem}
+.page-sub{font-size:13px;color:var(--muted);margin-bottom:1.5rem}
+.features-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+.feature-card.locked{opacity:0.6}
+.feature-card.unlocked{border-color:var(--accent);background:rgba(200,240,74,0.05)}
+.feature-header{display:flex;justify-content:space-between;align-items:flex-start}
+.feature-name{font-size:15px;font-weight:600;font-family:var(--font-head)}
+.feature-price{font-size:14px;font-weight:700;color:var(--accent);font-family:var(--font-head)}
+.feature-desc{font-size:13px;color:var(--muted);line-height:1.5}
+.feature-btn{margin-top:8px;padding:10px;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-head);border:none;transition:all 0.15s}
+.feature-btn.buy{background:var(--accent);color:#0a0a0f}
+.feature-btn.buy:hover{opacity:0.88}
+.feature-btn.owned{background:var(--success);color:#0a0a0f;cursor:default}
+
 /* ── CHAT ── */
 .chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 140px)}
 .chat-msgs{flex:1;overflow-y:auto;padding:0.5rem 0;display:flex;flex-direction:column;gap:10px}
@@ -303,6 +319,13 @@ select option{background:var(--bg2)}
         </div>
       </div>
     </div>
+
+    <!-- FEATURES -->
+    <div class="page" id="pg-features">
+      <h2 class="page-title"><i class="ti ti-crown"></i> Features Premium</h2>
+      <p class="page-sub">Desbloqueie funcionalidades avançadas para potencializar seus resultados</p>
+      <div class="features-grid" id="features-grid"></div>
+    </div>
   </div>
   <nav class="nav">
     <button class="nav-btn active" onclick="goPage('home',0)"><i class="ti ti-home"></i>Início</button>
@@ -310,6 +333,7 @@ select option{background:var(--bg2)}
     <button class="nav-btn" onclick="goPage('log',2)"><i class="ti ti-plus-circle"></i>Log</button>
     <button class="nav-btn" onclick="goPage('ev',3)"><i class="ti ti-chart-line"></i>Evolução</button>
     <button class="nav-btn" onclick="goPage('ia',4)"><i class="ti ti-robot"></i>IA</button>
+    <button class="nav-btn" onclick="goPage('features',5)"><i class="ti ti-crown"></i>Features</button>
   </nav>
 </div>
 
@@ -341,6 +365,66 @@ const firebaseConfig = {
 // ══════════════════════════════════════════════
 // Substitua com sua chave de API da Anthropic
 const ANTHROPIC_API_KEY = "SUA_CHAVE_API_ANTHROPIC";
+
+// ══════════════════════════════════════════════
+// CONFIGURAÇÃO FEATURES (MÓDULOS PAGOS)
+// ══════════════════════════════════════════════
+const FEATURES = {
+  treinos_personalizados: {
+    id: 'treinos_personalizados',
+    name: 'Treinos Personalizados',
+    description: 'Treinos combinados HIIT + musculação por objetivo (massa, peso, tonificação, gordura, performance, manutenção)',
+    price: 6
+  },
+  dieta_personalizada: {
+    id: 'dieta_personalizada',
+    name: 'Dieta Personalizada',
+    description: 'Plano alimentar com horários e alimentos para cada objetivo',
+    price: 6
+  },
+  cardio_suplementos: {
+    id: 'cardio_suplementos',
+    name: 'Cardio e Suplementos',
+    description: 'Recomendações de cardio e suplementos para potencializar resultados',
+    price: 6
+  },
+  metas_diarias: {
+    id: 'metas_diarias',
+    name: 'Metas Diárias',
+    description: 'Passos, água, IMC, gordura %, tipo físico',
+    price: 6
+  },
+  apple_health: {
+    id: 'apple_health',
+    name: 'Integração Apple Health',
+    description: 'Sincronização com app Saúde do iOS',
+    price: 6
+  },
+  medidas_corporais: {
+    id: 'medidas_corporais',
+    name: 'Medidas Corporais',
+    description: 'Registro de cintura, peito, braços, coxas e abdômen',
+    price: 6
+  },
+  analise_foto: {
+    id: 'analise_foto',
+    name: 'Análise de Foto',
+    description: 'Registro de calorias via análise de foto pela IA',
+    price: 6
+  },
+  jejum_sono: {
+    id: 'jejum_sono',
+    name: 'Jejum e Sono',
+    description: 'Jejum intermitente e qualidade do sono',
+    price: 6
+  },
+  perfil_completo: {
+    id: 'perfil_completo',
+    name: 'Perfil Completo',
+    description: 'Sexo, data de nascimento, peso objetivo, plano alimentar, progresso',
+    price: 6
+  }
+};
 
 // Inicializar Firebase
 try {
@@ -619,6 +703,7 @@ function bootApp(session){
   renderTreinos();
   renderLog();
   renderValidityCard(session.tokenKey);
+  renderFeatures();
 }
 
 // ══════════════════════════════════════════════
@@ -824,7 +909,7 @@ async function saveChatMessage(role, content){
   try {
     const session = getUserSession();
     if(!session) return;
-    
+
     const chatId = 'chat_' + session.tokenKey + '_' + Date.now();
     const message = {
       role,
@@ -835,11 +920,106 @@ async function saveChatMessage(role, content){
       userName: session.nome,
       tokenKey: session.tokenKey
     };
-    
+
     firebase.database().ref('gymai_chats/' + chatId).set(message);
   } catch(e) {
     console.error('Erro ao gravar mensagem no Firebase:', e);
   }
+}
+
+// ══════════════════════════════════════════════
+// SISTEMA DE FEATURES PAGAS
+// ══════════════════════════════════════════════
+async function getUserFeatures(){
+  try {
+    const session = getUserSession();
+    if(!session) return {};
+    const snapshot = await firebase.database().ref('gymai_features/' + session.tokenKey).once('value');
+    return snapshot.val() || {};
+  } catch(e) {
+    console.error('Erro ao buscar features do usuário:', e);
+    return {};
+  }
+}
+
+async function hasFeature(featureId){
+  const features = await getUserFeatures();
+  return features[featureId] === true;
+}
+
+async function requestFeaturePurchase(featureId){
+  try {
+    const session = getUserSession();
+    if(!session) return {error: 'Sessão não encontrada'};
+
+    const feature = FEATURES[featureId];
+    if(!feature) return {error: 'Feature não encontrada'};
+
+    const purchaseId = 'purchase_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    const pixKey = generatePixKey();
+
+    const purchase = {
+      id: purchaseId,
+      featureId,
+      featureName: feature.name,
+      price: feature.price,
+      pixKey,
+      status: 'pending',
+      createdAt: Date.now(),
+      tokenKey: session.tokenKey,
+      userName: session.nome
+    };
+
+    await firebase.database().ref('gymai_purchases/' + purchaseId).set(purchase);
+    return {success: true, purchaseId, pixKey, price: feature.price};
+  } catch(e) {
+    console.error('Erro ao solicitar compra:', e);
+    return {error: 'Erro ao solicitar compra'};
+  }
+}
+
+function generatePixKey(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+async function renderFeatures(){
+  const featuresGrid = document.getElementById('features-grid');
+  const userFeatures = await getUserFeatures();
+
+  let html = '';
+  for(const [key, feature] of Object.entries(FEATURES)){
+    const isOwned = userFeatures[key] === true;
+    html += '<div class="feature-card '+(isOwned?'unlocked':'locked')+'">';
+    html += '<div class="feature-header">';
+    html += '<div class="feature-name">'+feature.name+'</div>';
+    html += '<div class="feature-price">R$ '+feature.price+'</div>';
+    html += '</div>';
+    html += '<div class="feature-desc">'+feature.description+'</div>';
+    if(isOwned){
+      html += '<button class="feature-btn owned">Adquirido ✓</button>';
+    } else {
+      html += '<button class="feature-btn buy" onclick="buyFeature(\''+key+'\')">Comprar</button>';
+    }
+    html += '</div>';
+  }
+
+  featuresGrid.innerHTML = html;
+}
+
+async function buyFeature(featureId){
+  const result = await requestFeaturePurchase(featureId);
+  if(result.error){
+    alert(result.error);
+    return;
+  }
+
+  const modal = document.getElementById('modal-body');
+  modal.innerHTML = '<h2>Pagamento PIX</h2><p>Chave PIX: <strong>'+result.pixKey+'</strong></p><p>Valor: R$ '+result.price+'</p><p>Faça o pagamento e aguarde a confirmação automática.</p><button onclick="closeModal()">Fechar</button>';
+  document.getElementById('modal-bg').classList.add('open');
 }
 function addMsg(txt,who){
   const d=document.createElement('div');

@@ -147,6 +147,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       <button class="tab-btn" onclick="switchTab('tokens')"><i class="ti ti-users"></i> Acessos</button>
       <button class="tab-btn" onclick="switchTab('logins')"><i class="ti ti-history"></i> Logins</button>
       <button class="tab-btn" onclick="switchTab('chats')"><i class="ti ti-message"></i> Conversas</button>
+      <button class="tab-btn" onclick="switchTab('purchases')"><i class="ti ti-shopping-cart"></i> Pagamentos</button>
     </div>
 
     <!-- TAB CONTENT: STATS -->
@@ -244,6 +245,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       <div class="card">
         <h2><i class="ti ti-message"></i> Conversas com IA</h2>
         <div class="token-list" id="chats-list"></div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT: PAGAMENTOS -->
+    <div class="tab-content" id="tab-purchases">
+      <div class="card">
+        <h2><i class="ti ti-shopping-cart"></i> Pagamentos PIX</h2>
+        <div class="token-list" id="purchases-list"></div>
       </div>
     </div>
   </div>
@@ -387,6 +396,36 @@ function getChats(){
   });
 }
 
+function getPurchases(){
+  return new Promise((resolve, reject) => {
+    firebase.database().ref('gymai_purchases').once('value', (snapshot) => {
+      resolve(snapshot.val() || {});
+    }, (error) => {
+      console.error("Erro ao buscar pagamentos:", error);
+      resolve({});
+    });
+  });
+}
+
+async function confirmPurchase(purchaseId){
+  try {
+    const snapshot = await firebase.database().ref('gymai_purchases/' + purchaseId).once('value');
+    const purchase = snapshot.val();
+    if(!purchase || purchase.status !== 'pending') return;
+
+    // Liberar feature para o usuário
+    await firebase.database().ref('gymai_features/' + purchase.tokenKey + '/' + purchase.featureId).set(true);
+
+    // Atualizar status do pagamento
+    await firebase.database().ref('gymai_purchases/' + purchaseId + '/status').set('confirmed');
+    await firebase.database().ref('gymai_purchases/' + purchaseId + '/confirmedAt').set(Date.now());
+
+    renderAdmin();
+  } catch(e) {
+    console.error("Erro ao confirmar pagamento:", e);
+  }
+}
+
 function switchTab(tabName){
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -501,14 +540,17 @@ async function renderAdmin(){
   const requests = await getRequests();
   const logins = await getLogins();
   const chats = await getChats();
+  const purchases = await getPurchases();
   const list = document.getElementById('token-list');
   const reqList = document.getElementById('requests-list');
   const loginsList = document.getElementById('logins-list');
   const chatsList = document.getElementById('chats-list');
+  const purchasesList = document.getElementById('purchases-list');
   const entries = Object.entries(tokens);
   const reqEntries = Object.entries(requests);
   const loginEntries = Object.entries(logins);
   const chatEntries = Object.entries(chats);
+  const purchaseEntries = Object.entries(purchases);
   const now = Date.now();
 
   // stats
@@ -553,6 +595,18 @@ async function renderAdmin(){
       const roleColor = c.role === 'user' ? 'pill-ok' : c.role === 'ai' ? 'pill-exp' : 'pill-used';
       const roleText = c.role === 'user' ? 'Usuário' : c.role === 'ai' ? 'IA' : 'Erro';
       return '<div class="token-item"><div class="token-item-header"><div><div class="token-nome">'+c.userName+'</div><div class="token-key">'+c.date+' - '+c.time+'</div></div><span class="status-pill '+roleColor+'">'+roleText+'</span></div><div class="token-meta"><span><i class="ti '+roleIcon+'" style="font-size:12px"></i> '+c.content.substring(0,100)+'...</span></div></div>';
+    }).join('');
+  }
+
+  // Render pagamentos
+  if(!purchaseEntries.length){
+    purchasesList.innerHTML='<div class="empty"><i class="ti ti-shopping-cart"></i>Nenhum pagamento registrado</div>';
+  } else {
+    purchasesList.innerHTML = purchaseEntries.reverse().map(([id,p])=>{
+      const statusColor = p.status === 'pending' ? 'pill-used' : 'pill-ok';
+      const statusText = p.status === 'pending' ? 'Pendente' : 'Confirmado';
+      const actionBtn = p.status === 'pending' ? '<button class="act-btn" onclick="confirmPurchase(\''+id+'\')"><i class="ti ti-check"></i> Confirmar</button>' : '';
+      return '<div class="token-item"><div class="token-item-header"><div><div class="token-nome">'+p.userName+'</div><div class="token-key">'+p.featureName+' - R$ '+p.price+'</div></div><span class="status-pill '+statusColor+'">'+statusText+'</span></div><div class="token-meta"><span><i class="ti ti-credit-card" style="font-size:12px"></i> '+p.pixKey+'</span><span><i class="ti ti-clock" style="font-size:12px"></i> '+new Date(p.createdAt).toLocaleString('pt-BR')+'</span></div><div class="token-actions">'+actionBtn+'</div></div>';
     }).join('');
   }
 
