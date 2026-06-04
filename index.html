@@ -336,6 +336,12 @@ const firebaseConfig = {
   measurementId: "G-3QV0WNZR9Y"
 };
 
+// ══════════════════════════════════════════════
+// CONFIGURAÇÃO IA (ANTHROPIC)
+// ══════════════════════════════════════════════
+// Substitua com sua chave de API da Anthropic
+const ANTHROPIC_API_KEY = "SUA_CHAVE_API_ANTHROPIC";
+
 // Inicializar Firebase
 try {
   firebase.initializeApp(firebaseConfig);
@@ -782,21 +788,58 @@ async function sendIA(){
   document.getElementById('chat-msgs').appendChild(typing);
   scrollChat();
   const ctx = `Usuário: ${document.getElementById('user-nome-chip').textContent}. Séries hoje: ${logData.length}. Volume: ${Math.round(logData.reduce((a,l)=>a+(l.c*l.s*l.r),0))}kg.`;
+  
+  // Gravar mensagem do usuário no Firebase
+  await saveChatMessage('user', msg);
+  
   try{
     const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{
+        'Content-Type':'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
         system:`Você é personal trainer virtual expert em musculação e hipertrofia. Responda em português brasileiro de forma objetiva e motivacional. Máximo 3 parágrafos. ${ctx}`,
         messages:[{role:'user',content:msg}]})
     });
     const data = await res.json();
     typing.remove();
-    addMsg(data.content?.[0]?.text||'Não consegui resposta. Tente novamente.','ai');
+    const aiResponse = data.content?.[0]?.text||'Não consegui resposta. Tente novamente.';
+    addMsg(aiResponse,'ai');
+    
+    // Gravar resposta da IA no Firebase
+    await saveChatMessage('ai', aiResponse);
   }catch(e){
     typing.remove();
     addMsg('Erro de conexão. Verifique a internet e tente novamente.','ai');
+    
+    // Gravar erro no Firebase
+    await saveChatMessage('error', 'Erro de conexão: ' + e.message);
   }
   btn.disabled=false; scrollChat();
+}
+
+async function saveChatMessage(role, content){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+    
+    const chatId = 'chat_' + session.tokenKey + '_' + Date.now();
+    const message = {
+      role,
+      content,
+      timestamp: Date.now(),
+      date: new Date().toLocaleDateString('pt-BR'),
+      time: new Date().toLocaleTimeString('pt-BR'),
+      userName: session.nome,
+      tokenKey: session.tokenKey
+    };
+    
+    firebase.database().ref('gymai_chats/' + chatId).set(message);
+  } catch(e) {
+    console.error('Erro ao gravar mensagem no Firebase:', e);
+  }
 }
 function addMsg(txt,who){
   const d=document.createElement('div');
