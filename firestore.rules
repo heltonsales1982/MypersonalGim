@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regras para tokens de acesso
+    match /gymai_tokens/{tokenKey} {
+      allow read: if isSignedIn() && isAdmin();
+      allow write: if isSignedIn() && isAdmin();
+    }
+    
+    // Regras para features do usuário
+    match /gymai_features/{tokenKey}/{document=**} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && isAdmin();
+    }
+    
+    // Regras para solicitações de acesso
+    match /gymai_requests/{requestId} {
+      allow read: if isSignedIn() && isAdmin();
+      allow write: if isSignedIn();
+    }
+    
+    // Regras para log de treinos
+    match /gymai_log/{tokenKey}/{document=**} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para perfil do usuário
+    match /gymai_profile/{tokenKey} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para medidas corporais
+    match /gymai_medidas/{tokenKey} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para metas diárias
+    match /gymai_metas/{tokenKey} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para treinos personalizados
+    match /gymai_treinos/{tokenKey} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para dietas
+    match /gymai_dietas/{tokenKey} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para jejum e sono
+    match /gymai_jejum_sono/{tokenKey} {
+      allow read: if isSignedIn() && (request.auth.token.email == tokenKey || isAdmin());
+      allow write: if isSignedIn() && request.auth.token.email == tokenKey;
+    }
+    
+    // Regras para sessões de chat
+    match /gymai_chat_sessions/{sessionId} {
+      allow read: if isSignedIn() && isAdmin();
+      allow write: if isSignedIn();
+    }
+    
+    // Regras para pagamentos
+    match /gymai_purchases/{purchaseId} {
+      allow read: if isSignedIn() && isAdmin();
+      allow write: if isSignedIn() && isAdmin();
+    }
+  }
+}
+
+// Funções auxiliares
+function isSignedIn() {
+  return request.auth != null;
+}
+
+function isAdmin() {
+  return isSignedIn() && 
+         (request.auth.token.email == 'admin@peakos.com' || 
+          request.auth.token.admin == true);
+}
