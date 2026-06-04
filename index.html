@@ -1304,15 +1304,21 @@ async function loadDiasFeitos(){
     const dias = snapshot.val();
     if(dias){
       DIAS_FEITOS = Object.keys(dias).map(key => parseInt(dias[key].dia));
+    } else {
+      DIAS_FEITOS = [];
     }
+
+    renderDias();
 
     // Listener para atualização automática
     firebase.database().ref('gymai_dias_treino/' + session.tokenKey).on('value', (snapshot) => {
       const dias = snapshot.val();
       if(dias){
         DIAS_FEITOS = Object.keys(dias).map(key => parseInt(dias[key].dia));
-        renderDias();
+      } else {
+        DIAS_FEITOS = [];
       }
+      renderDias();
     });
   } catch(e) {
     console.error('Erro ao carregar dias de treino:', e);
