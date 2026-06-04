@@ -2423,21 +2423,24 @@ const TREINOS_POR_OBJETIVO = {
 };
 
 async function gerarTreino(){
-  const objetivo = document.getElementById('objetivo-treino').value;
-  if(!objetivo){
-    alert('Selecione um objetivo de treino');
-    return;
-  }
-
-  const treino = TREINOS_POR_OBJETIVO[objetivo];
-  if(!treino){
-    alert('Objetivo inválido');
-    return;
-  }
-
   try {
+    const objetivo = document.getElementById('objetivo-treino').value;
+    if(!objetivo){
+      alert('Selecione um objetivo de treino');
+      return;
+    }
+
+    const treino = TREINOS_POR_OBJETIVO[objetivo];
+    if(!treino){
+      alert('Objetivo inválido');
+      return;
+    }
+
     const session = getUserSession();
-    if(!session) return;
+    if(!session){
+      alert('Sessão não encontrada. Faça login novamente.');
+      return;
+    }
 
     const treinoData = {
       objetivo,
@@ -2455,7 +2458,7 @@ async function gerarTreino(){
     renderTreinos();
   } catch(e) {
     console.error('Erro ao gerar treino:', e);
-    alert('Erro ao gerar treino');
+    alert('Erro ao gerar treino: ' + e.message);
   }
 }
 
