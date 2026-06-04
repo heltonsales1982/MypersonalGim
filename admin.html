@@ -104,6 +104,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center}
 .stat-card-label{font-size:13px;color:var(--muted);margin-bottom:8px}
 .stat-card-value{font-size:32px;font-weight:700;color:var(--accent);font-family:var(--font-head)}
+
+/* FEATURES */
+.feature-item{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:0.5rem}
+.feature-info{flex:1}
+.feature-name{font-weight:600;font-size:14px;color:var(--text)}
+.feature-desc{font-size:12px;color:var(--muted);margin-top:4px}
+.feature-price{font-size:11px;color:var(--accent);margin-top:4px;font-weight:700}
+.feature-action{flex-shrink:0}
 </style>
 </head>
 <body>
@@ -149,6 +157,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       <button class="tab-btn" onclick="switchTab('requests')"><i class="ti ti-user-check"></i> Solicitações</button>
       <button class="tab-btn" onclick="switchTab('generate')"><i class="ti ti-qrcode"></i> Gerar Acesso</button>
       <button class="tab-btn" onclick="switchTab('tokens')"><i class="ti ti-users"></i> Acessos</button>
+      <button class="tab-btn" onclick="switchTab('features')"><i class="ti ti-crown"></i> Features</button>
       <button class="tab-btn" onclick="switchTab('logins')"><i class="ti ti-history"></i> Logins</button>
       <button class="tab-btn" onclick="switchTab('chats')"><i class="ti ti-message"></i> Conversas</button>
       <button class="tab-btn" onclick="switchTab('purchases')"><i class="ti ti-shopping-cart"></i> Pagamentos</button>
@@ -233,6 +242,23 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       <div class="card">
         <h2><i class="ti ti-users"></i> Acessos gerados</h2>
         <div class="token-list" id="token-list"></div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT: FEATURES -->
+    <div class="tab-content" id="tab-features">
+      <div class="card">
+        <h2><i class="ti ti-crown"></i> Gerenciar Features por Usuário</h2>
+        <div class="field-group">
+          <label>Selecione o usuário</label>
+          <select id="grant-user" onchange="loadUserFeatures()">
+            <option value="">Selecione um usuário...</option>
+          </select>
+        </div>
+        <div id="user-features-container" style="display:none">
+          <h3>Features do usuário</h3>
+          <div class="features-list" id="user-features-list"></div>
+        </div>
       </div>
     </div>
 
@@ -775,6 +801,94 @@ async function revogar(id){
   delete tokens[id];
   saveTokens(tokens);
   renderAdmin();
+}
+
+// ══════════════════════════════════════════════
+// GERENCIAMENTO DE FEATURES
+// ══════════════════════════════════════════════
+const FEATURES = {
+  scanner_corporal: {
+    name: 'Scanner Corporal IA',
+    description: 'Análise de fotos para estimar composição corporal',
+    price: 0
+  },
+  metas_inteligentes: {
+    name: 'Metas Inteligentes',
+    description: 'IA gera metas personalizadas baseadas no seu perfil',
+    price: 0
+  },
+  performance_score: {
+    name: 'Performance Score',
+    description: 'Dashboard com score de performance em tempo real',
+    price: 0
+  },
+  coach_avancado: {
+    name: 'Coach Avançado',
+    description: 'IA com análise avançada e recomendações personalizadas',
+    price: 29.90
+  },
+  treinos_personalizados: {
+    name: 'Treinos Personalizados',
+    description: 'Treinos gerados especificamente para o seu objetivo',
+    price: 49.90
+  }
+};
+
+async function loadUserFeatures(){
+  const tokenKey = document.getElementById('grant-user').value;
+  if(!tokenKey){
+    document.getElementById('user-features-container').style.display = 'none';
+    return;
+  }
+
+  try {
+    const snapshot = await firebase.database().ref('gymai_features/' + tokenKey).once('value');
+    const userFeatures = snapshot.val() || {};
+
+    const container = document.getElementById('user-features-list');
+    let html = '';
+
+    for(const [key, feature] of Object.entries(FEATURES)){
+      const isActive = userFeatures[key] === true;
+      const isFree = feature.price === 0;
+
+      html += '<div class="feature-item">';
+      html += '<div class="feature-info">';
+      html += '<div class="feature-name">' + feature.name + '</div>';
+      html += '<div class="feature-desc">' + feature.description + '</div>';
+      html += '<div class="feature-price">' + (isFree ? 'Grátis' : 'R$ ' + feature.price.toFixed(2)) + '</div>';
+      html += '</div>';
+      html += '<div class="feature-action">';
+      if(isActive){
+        html += '<button class="act-btn danger" onclick="toggleFeature(\'' + tokenKey + '\', \'' + key + '\', false)">Desativar</button>';
+      } else {
+        html += '<button class="act-btn" onclick="toggleFeature(\'' + tokenKey + '\', \'' + key + '\', true)">Ativar</button>';
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+    document.getElementById('user-features-container').style.display = 'block';
+
+  } catch(e) {
+    console.error('Erro ao carregar features do usuário:', e);
+  }
+}
+
+async function toggleFeature(tokenKey, featureId, activate){
+  try {
+    if(activate){
+      await firebase.database().ref('gymai_features/' + tokenKey + '/' + featureId).set(true);
+    } else {
+      await firebase.database().ref('gymai_features/' + tokenKey + '/' + featureId).remove();
+    }
+
+    loadUserFeatures();
+  } catch(e) {
+    console.error('Erro ao alterar feature:', e);
+    alert('Erro ao alterar feature');
+  }
 }
 </script>
 </body>
