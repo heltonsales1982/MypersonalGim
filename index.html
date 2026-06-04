@@ -1436,13 +1436,39 @@ async function salvarDiaTreino(dia){
       await firebase.database().ref('gymai_dias_treino/' + session.tokenKey + '/' + dia).set(diaData);
       renderDias();
 
+      // Gravar em gymai_logins
+      await firebase.database().ref('gymai_logins').push({
+        tokenKey: session.tokenKey,
+        email: session.tokenKey,
+        nome: session.nome,
+        action: 'checkin',
+        dia,
+        location,
+        timestamp: Date.now()
+      });
+
+      // Mostrar popup de confirmação
+      document.getElementById('modal-body').innerHTML = `
+        <div class="modal-title">Check-in realizado com sucesso! ✓<button class="modal-close" onclick="closeModal()">×</button></div>
+        <div class="card-sub">Seu check-in foi registrado e gravado no sistema.</div>
+        ${location ? `
+          <div class="card-sub" style="margin-top: 1rem">📍 Localização capturada</div>
+          <div class="card-sub" style="font-size: 12px; color: var(--muted)">
+            Lat: ${location.latitude.toFixed(6)}, Long: ${location.longitude.toFixed(6)}
+          </div>
+        ` : ''}
+        <button class="btn-main" onclick="closeModal()" style="margin-top: 1rem">Fechar</button>
+      `;
+      document.getElementById('modal-bg').classList.add('open');
+
       // Mostrar mapa se localização foi obtida
       if(location){
-        mostrarMapaCheckin(location);
+        setTimeout(() => mostrarMapaCheckin(location), 2000);
       }
     }
   } catch(e) {
     console.error('Erro ao salvar dia de treino:', e);
+    alert('Erro ao realizar check-in. Tente novamente.');
   }
 }
 
