@@ -1189,22 +1189,81 @@ const FICHAS = [
   {id:'B',nome:'Treino B',foco:'Costas & Bíceps',ex:['Puxada frontal','Remada curvada','Remada unilateral','Rosca direta','Rosca martelo','Face pull'],grupos:['Costas','Bíceps','Posterior'],min:55},
   {id:'C',nome:'Treino C',foco:'Pernas',ex:['Agachamento','Leg press','Cadeira extensora','Cadeira flexora','Panturrilha','Stiff'],grupos:['Quadríceps','Posterior','Glúteo'],min:60},
 ];
-function renderTreinos(){
+async function renderTreinos(){
   const session = getUserSession();
   if(session){
-    firebase.database().ref('gymai_treinos/' + session.tokenKey).once('value', (snapshot) => {
-      const treinoPersonalizado = snapshot.val();
-      if(treinoPersonalizado){
-        renderTreinoPersonalizado(treinoPersonalizado);
-        return;
+    try {
+      const snapshot = await firebase.database().ref('gymai_fichas/' + session.tokenKey).once('value');
+      const fichas = snapshot.val();
+
+      if(fichas){
+        const fichasArray = Object.values(fichas);
+        renderFichasPersonalizadas(fichasArray);
+      } else {
+        renderTreinosPadroes();
       }
+    } catch(e) {
+      console.error('Erro ao buscar fichas personalizadas:', e);
       renderTreinosPadroes();
-    }, (error) => {
-      console.error('Erro ao buscar treino personalizado:', error);
-      renderTreinosPadroes();
-    });
+    }
   } else {
     renderTreinosPadroes();
+  }
+}
+
+function renderFichasPersonalizadas(fichas){
+  document.getElementById('treinos-list').innerHTML = fichas.map(f => `
+    <div class="card card-clickable">
+      <div class="card-title">${f.nome}</div>
+      <div class="card-sub">${f.exercicios.length} exercícios · Criado em ${new Date(f.createdAt).toLocaleDateString('pt-BR')}</div>
+      ${f.grupos.map(g => `<span class="badge badge-lime">${g}</span>`).join('')}
+      <div style="margin-top:0.5rem">
+        <button class="btn-ghost" onclick="verFicha('${f.id}')" style="padding:6px 12px;font-size:12px">Ver exercícios</button>
+        <button class="btn-ghost danger" onclick="deletarFicha('${f.id}')" style="padding:6px 12px;font-size:12px">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function verFicha(fichaId){
+  const session = getUserSession();
+  if(!session) return;
+
+  try {
+    const snapshot = await firebase.database().ref('gymai_fichas/' + session.tokenKey + '/' + fichaId).once('value');
+    const ficha = snapshot.val();
+
+    if(ficha){
+      document.getElementById('modal-body').innerHTML = `
+        <div class="modal-title">${ficha.nome}<button class="modal-close" onclick="closeModal()">×</button></div>
+        <div class="card-sub">Grupos: ${ficha.grupos.join(', ')}</div>
+        ${ficha.exercicios.map(e => `
+          <div class="ex-row">
+            <span class="ex-nome">${e.nome}</span>
+            <span class="ex-meta">${e.series}x${e.repeticoes} | Descanso: ${e.descanso}s</span>
+          </div>
+        `).join('')}
+        <button class="btn-main" onclick="closeModal();goPage('log',2)"><i class="ti ti-player-play"></i> Iniciar treino</button>
+        <button class="btn-ghost" onclick="closeModal()">Fechar</button>`;
+      document.getElementById('modal-bg').classList.add('open');
+    }
+  } catch(e) {
+    console.error('Erro ao buscar ficha:', e);
+  }
+}
+
+async function deletarFicha(fichaId){
+  if(!confirm('Tem certeza que deseja excluir esta ficha?')) return;
+
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    await firebase.database().ref('gymai_fichas/' + session.tokenKey + '/' + fichaId).remove();
+    renderTreinos();
+  } catch(e) {
+    console.error('Erro ao deletar ficha:', e);
+    alert('Erro ao deletar ficha');
   }
 }
 
@@ -1244,14 +1303,92 @@ function openTreino(id){
     <button class="btn-ghost" onclick="closeModal()">Fechar</button>`;
   document.getElementById('modal-bg').classList.add('open');
 }
+let exerciciosTemp = [];
 function openNovoTreino(){
+  exerciciosTemp = [];
   document.getElementById('modal-body').innerHTML = `
     <div class="modal-title">Nova ficha<button class="modal-close" onclick="closeModal()">×</button></div>
-    <div class="field-group"><label>Nome da ficha</label><input type="text" placeholder="Ex: Treino D — Ombro"></div>
-    <div class="field-group"><label>Grupos musculares</label><input type="text" placeholder="Ex: Ombro, Trapézio"></div>
-    <button class="btn-main" onclick="closeModal()">Salvar ficha</button>
+    <div class="field-group"><label>Nome da ficha</label><input type="text" id="ficha-nome" placeholder="Ex: Treino D — Ombro"></div>
+    <div class="field-group"><label>Grupos musculares</label><input type="text" id="ficha-grupos" placeholder="Ex: Ombro, Trapézio"></div>
+    <div class="field-group"><label>Exercícios</label>
+    <div id="exercicios-list"></div>
+    <button class="btn-ghost" onclick="addExercicioTemp()" style="margin-top:0.5rem"><i class="ti ti-plus"></i> Adicionar exercício</button>
+    <button class="btn-main" onclick="salvarFicha()" style="margin-top:1rem">Salvar ficha</button>
     <button class="btn-ghost" onclick="closeModal()">Cancelar</button>`;
   document.getElementById('modal-bg').classList.add('open');
+}
+
+function addExercicioTemp(){
+  const nome = prompt('Nome do exercício:');
+  if(!nome) return;
+  const series = prompt('Número de séries:', '3');
+  const reps = prompt('Repetições:', '10-12');
+  const descanso = prompt('Descanso (segundos):', '60');
+
+  exerciciosTemp.push({
+    nome,
+    series: parseInt(series) || 3,
+    repeticoes: reps || '10-12',
+    descanso: parseInt(descanso) || 60
+  });
+
+  renderExerciciosTemp();
+}
+
+function renderExerciciosTemp(){
+  const container = document.getElementById('exercicios-list');
+  if(!container) return;
+
+  container.innerHTML = exerciciosTemp.map((e, i) => `
+    <div class="ex-row">
+      <span class="ex-nome">${e.nome}</span>
+      <span class="ex-meta">${e.series}x${e.repeticoes} | Descanso: ${e.descanso}s</span>
+      <button class="btn-ghost danger" onclick="removeExercicioTemp(${i})" style="padding:4px 8px;font-size:12px">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeExercicioTemp(index){
+  exerciciosTemp.splice(index, 1);
+  renderExerciciosTemp();
+}
+
+async function salvarFicha(){
+  const nome = document.getElementById('ficha-nome').value.trim();
+  const grupos = document.getElementById('ficha-grupos').value.trim();
+
+  if(!nome){
+    alert('Digite o nome da ficha');
+    return;
+  }
+
+  if(exerciciosTemp.length === 0){
+    alert('Adicione pelo menos um exercício');
+    return;
+  }
+
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const fichaId = 'ficha_' + Date.now();
+    const ficha = {
+      id: fichaId,
+      nome,
+      grupos: grupos ? grupos.split(',').map(g => g.trim()) : [],
+      exercicios: exerciciosTemp,
+      createdAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_fichas/' + session.tokenKey + '/' + fichaId).set(ficha);
+
+    alert('Ficha salva com sucesso!');
+    closeModal();
+    renderTreinos();
+  } catch(e) {
+    console.error('Erro ao salvar ficha:', e);
+    alert('Erro ao salvar ficha');
+  }
 }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }
 
