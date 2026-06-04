@@ -319,23 +319,59 @@ select option{background:var(--bg2)}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
+// ══════════════════════════════════════════════
+// CONFIGURAÇÃO FIREBASE
+// ══════════════════════════════════════════════
+// Substitua com suas credenciais do Firebase
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com"
+};
+
+// Inicializar Firebase
+try {
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+} catch(e) {
+  console.error("Erro ao inicializar Firebase:", e);
+}
+
 // ══════════════════════════════════════════════
 // CONTROLE DE ACESSO
 // ══════════════════════════════════════════════
-const ADMIN_KEY = 'gymai_admin_tokens'; // mesma chave usada pelo admin.html
-const REQUESTS_KEY = 'gymai_requests'; // chave para solicitações pendentes
+const ADMIN_KEY = 'gymai_admin_tokens';
+const REQUESTS_KEY = 'gymai_requests';
 
 function getTokens(){
-  try{ return JSON.parse(localStorage.getItem(ADMIN_KEY)||'{}'); }catch(e){return{};}
+  return new Promise((resolve, reject) => {
+    firebase.database().ref(ADMIN_KEY).once('value', (snapshot) => {
+      resolve(snapshot.val() || {});
+    }, (error) => {
+      console.error("Erro ao buscar tokens:", error);
+      resolve({});
+    });
+  });
 }
 
 function getRequests(){
-  try{ return JSON.parse(localStorage.getItem(REQUESTS_KEY)||'{}'); }catch(e){return{};}
+  return new Promise((resolve, reject) => {
+    firebase.database().ref(REQUESTS_KEY).once('value', (snapshot) => {
+      resolve(snapshot.val() || {});
+    }, (error) => {
+      console.error("Erro ao buscar solicitações:", error);
+      resolve({});
+    });
+  });
 }
 
 function saveRequests(reqs){
-  localStorage.setItem(REQUESTS_KEY, JSON.stringify(reqs));
+  firebase.database().ref(REQUESTS_KEY).set(reqs);
 }
 
 function getUrlToken(){
@@ -351,8 +387,8 @@ function saveSession(data){
   localStorage.setItem('gymai_session', JSON.stringify(data));
 }
 
-function validateToken(tk){
-  const tokens = getTokens();
+async function validateToken(tk){
+  const tokens = await getTokens();
   if(!tokens[tk]) return {ok:false, msg:'Token não encontrado. Solicite um novo QR code ao administrador.'};
   const t = tokens[tk];
   const now = Date.now();
@@ -361,22 +397,22 @@ function validateToken(tk){
   return {ok:true, token:t, key:tk};
 }
 
-function consumeTokenUse(tk){
-  const tokens = getTokens();
+async function consumeTokenUse(tk){
+  const tokens = await getTokens();
   if(tokens[tk]){
     tokens[tk].uses = (tokens[tk].uses||0) + 1;
-    localStorage.setItem(ADMIN_KEY, JSON.stringify(tokens));
+    firebase.database().ref(ADMIN_KEY).set(tokens);
   }
 }
 
 // ── INICIALIZAÇÃO ──
-window.addEventListener('load', ()=>{
+window.addEventListener('load', async ()=>{
   const urlToken = getUrlToken();
   const session = getUserSession();
 
   // já tem sessão válida
   if(session){
-    const check = validateToken(session.tokenKey);
+    const check = await validateToken(session.tokenKey);
     if(check.ok){
       bootApp(session);
       return;
@@ -385,7 +421,7 @@ window.addEventListener('load', ()=>{
 
   // vem com token na URL (para compatibilidade)
   if(urlToken){
-    const check = validateToken(urlToken);
+    const check = await validateToken(urlToken);
     if(!check.ok){
       showAccessScreen(urlToken, check.msg);
       return;
@@ -417,7 +453,7 @@ function showAccessScreen(tk, errMsg, tokenData){
   document.getElementById('token-info').textContent = '';
 }
 
-function requestAccess(){
+async function requestAccess(){
   const nome = document.getElementById('field-nome').value.trim();
   const celular = document.getElementById('field-celular').value.trim();
   const errEl = document.getElementById('access-error');
@@ -427,7 +463,7 @@ function requestAccess(){
   if(!celular || celular.length < 10){errEl.textContent='Digite um celular válido (com DDD).';errEl.classList.add('show');return;}
 
   // Verificar se já existe solicitação para este celular
-  const requests = getRequests();
+  const requests = await getRequests();
   const existing = Object.values(requests).find(r => r.celular === celular);
   if(existing){
     if(existing.status === 'pending'){
@@ -438,7 +474,7 @@ function requestAccess(){
     if(existing.status === 'approved'){
       // Já aprovado, verificar se tem token
       if(existing.tokenKey){
-        const check = validateToken(existing.tokenKey);
+        const check = await validateToken(existing.tokenKey);
         if(check.ok){
           const session = {nome, tokenKey:existing.tokenKey, createdAt:Date.now()};
           saveSession(session);

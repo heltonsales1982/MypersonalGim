@@ -201,7 +201,29 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
+// ══════════════════════════════════════════════
+// CONFIGURAÇÃO FIREBASE
+// ══════════════════════════════════════════════
+// Substitua com suas credenciais do Firebase
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com"
+};
+
+// Inicializar Firebase
+try {
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+} catch(e) {
+  console.error("Erro ao inicializar Firebase:", e);
+}
+
 // ══════════════════════════════════════════════
 // CONFIG — ALTERE AQUI
 // ══════════════════════════════════════════════
@@ -240,21 +262,45 @@ document.getElementById('admin-pwd').addEventListener('keydown',e=>{ if(e.key===
 // ══════════════════════════════════════════════
 // TOKENS
 // ══════════════════════════════════════════════
-function getTokens(){ try{return JSON.parse(localStorage.getItem(ADMIN_STORE_KEY)||'{}')}catch(e){return{}} }
-function saveTokens(t){ localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(t)); }
+function getTokens(){
+  return new Promise((resolve, reject) => {
+    firebase.database().ref(ADMIN_STORE_KEY).once('value', (snapshot) => {
+      resolve(snapshot.val() || {});
+    }, (error) => {
+      console.error("Erro ao buscar tokens:", error);
+      resolve({});
+    });
+  });
+}
+
+function saveTokens(t){
+  firebase.database().ref(ADMIN_STORE_KEY).set(t);
+}
 
 // ══════════════════════════════════════════════
 // SOLICITAÇÕES
 // ══════════════════════════════════════════════
-function getRequests(){ try{return JSON.parse(localStorage.getItem(REQUESTS_KEY)||'{}')}catch(e){return{}} }
-function saveRequests(r){ localStorage.setItem(REQUESTS_KEY, JSON.stringify(r)); }
+function getRequests(){
+  return new Promise((resolve, reject) => {
+    firebase.database().ref(REQUESTS_KEY).once('value', (snapshot) => {
+      resolve(snapshot.val() || {});
+    }, (error) => {
+      console.error("Erro ao buscar solicitações:", error);
+      resolve({});
+    });
+  });
+}
+
+function saveRequests(r){
+  firebase.database().ref(REQUESTS_KEY).set(r);
+}
 
 function gerarId(){
   return 'tk_'+Math.random().toString(36).substring(2,10)+Date.now().toString(36);
 }
 
-function aprovarSolicitacao(requestId){
-  const requests = getRequests();
+async function aprovarSolicitacao(requestId){
+  const requests = await getRequests();
   const req = requests[requestId];
   if(!req || req.status !== 'pending') return;
 
@@ -270,7 +316,7 @@ function aprovarSolicitacao(requestId){
     uses: 0,
   };
 
-  const tokens = getTokens();
+  const tokens = await getTokens();
   tokens[id] = token;
   saveTokens(tokens);
 
@@ -283,9 +329,9 @@ function aprovarSolicitacao(requestId){
   renderAdmin();
 }
 
-function rejeitarSolicitacao(requestId){
+async function rejeitarSolicitacao(requestId){
   if(!confirm('Rejeitar esta solicitação?')) return;
-  const requests = getRequests();
+  const requests = await getRequests();
   if(requests[requestId]){
     requests[requestId].status = 'rejected';
     requests[requestId].rejectedAt = Date.now();
@@ -294,7 +340,7 @@ function rejeitarSolicitacao(requestId){
   }
 }
 
-function gerarToken(){
+async function gerarToken(){
   const nome = document.getElementById('g-nome').value.trim();
   const dias = parseInt(document.getElementById('g-dias').value)||0;
   const usos = parseInt(document.getElementById('g-usos').value)||0;
@@ -312,7 +358,7 @@ function gerarToken(){
     uses: 0,
   };
 
-  const tokens = getTokens();
+  const tokens = await getTokens();
   tokens[id] = token;
   saveTokens(tokens);
 
@@ -351,9 +397,9 @@ function copyUrl(){
 // ══════════════════════════════════════════════
 // RENDER LISTA
 // ══════════════════════════════════════════════
-function renderAdmin(){
-  const tokens = getTokens();
-  const requests = getRequests();
+async function renderAdmin(){
+  const tokens = await getTokens();
+  const requests = await getRequests();
   const list = document.getElementById('token-list');
   const reqList = document.getElementById('requests-list');
   const entries = Object.entries(tokens);
@@ -396,8 +442,8 @@ function renderAdmin(){
   }).join('');
 }
 
-function reexibirQR(id){
-  const tokens = getTokens();
+async function reexibirQR(id){
+  const tokens = await getTokens();
   const t = tokens[id];
   if(!t) return;
   const baseUrl = document.getElementById('g-url').value.trim() || DEFAULT_URL;
@@ -405,8 +451,8 @@ function reexibirQR(id){
   mostrarQR(id, t, url);
 }
 
-function renovar(id){
-  const tokens = getTokens();
+async function renovar(id){
+  const tokens = await getTokens();
   if(!tokens[id]) return;
   const now = Date.now();
   const base = tokens[id].expiresAt ? Math.max(tokens[id].expiresAt, now) : now;
@@ -415,9 +461,9 @@ function renovar(id){
   renderAdmin();
 }
 
-function revogar(id){
+async function revogar(id){
   if(!confirm('Revogar este acesso? O usuário não conseguirá mais entrar.')) return;
-  const tokens = getTokens();
+  const tokens = await getTokens();
   delete tokens[id];
   saveTokens(tokens);
   renderAdmin();
