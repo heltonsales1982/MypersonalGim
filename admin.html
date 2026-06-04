@@ -257,8 +257,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       <div class="card">
         <h2><i class="ti ti-gift"></i> Liberar Feature Diretamente</h2>
         <div class="field-group">
-          <label>Token Key do usuário</label>
-          <input type="text" id="grant-token" placeholder="Token key do usuário">
+          <label>Selecione o usuário</label>
+          <select id="grant-user" onchange="onUserSelect()">
+            <option value="">Selecione um usuário...</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Token Key do usuário (se selecionado acima)</label>
+          <input type="text" id="grant-token" placeholder="Token key do usuário" readonly>
         </div>
         <div class="field-group">
           <label>Feature</label>
@@ -454,17 +460,24 @@ async function grantFeatureDirectly(){
     const featureId = document.getElementById('grant-feature').value;
 
     if(!tokenKey){
-      alert('Digite o token key do usuário');
+      alert('Selecione um usuário ou digite o token key');
       return;
     }
 
     await firebase.database().ref('gymai_features/' + tokenKey + '/' + featureId).set(true);
     alert('Feature liberada com sucesso!');
     document.getElementById('grant-token').value = '';
+    document.getElementById('grant-user').value = '';
   } catch(e) {
     console.error("Erro ao liberar feature:", e);
     alert('Erro ao liberar feature');
   }
+}
+
+function onUserSelect(){
+  const select = document.getElementById('grant-user');
+  const tokenInput = document.getElementById('grant-token');
+  tokenInput.value = select.value;
 }
 
 function switchTab(tabName){
@@ -654,7 +667,13 @@ async function renderAdmin(){
   // Render tokens
   if(!entries.length){
     list.innerHTML='<div class="empty"><i class="ti ti-users"></i>Nenhum acesso gerado ainda</div>';
-    return;
+  } else {
+    // Preencher dropdown de usuários para liberar features
+    const userSelect = document.getElementById('grant-user');
+    userSelect.innerHTML = '<option value="">Selecione um usuário...</option>';
+    entries.forEach(([id,t])=>{
+      userSelect.innerHTML += '<option value="'+id+'">'+t.nome+' ('+(t.celular||'sem celular')+')</option>';
+    });
   }
 
   list.innerHTML = entries.reverse().map(([id,t])=>{
