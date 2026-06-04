@@ -82,6 +82,6 @@ function isSignedIn() {
 
 function isAdmin() {
   return isSignedIn() && 
-         (request.auth.token.email == 'admin@peakos.com' || 
+         (request.auth.token.email == 'heltonsales@icloud.com' || 
           request.auth.token.admin == true);
 }
