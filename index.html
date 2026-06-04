@@ -508,22 +508,22 @@ async function requestAccess(){
 async function checkApproval(celular){
   const requests = await getRequests();
   const existing = Object.values(requests).find(r => r.celular === celular);
-  
+
   if(!existing){
     document.getElementById('token-info').innerHTML = 'Solicitação não encontrada. Tente novamente.';
     return;
   }
-  
+
   if(existing.status === 'pending'){
     document.getElementById('token-info').innerHTML = 'Ainda pendente. Aguarde aprovação do administrador.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\')">Verificar novamente</button>';
     return;
   }
-  
+
   if(existing.status === 'rejected'){
     document.getElementById('token-info').innerHTML = 'Sua solicitação foi rejeitada. Entre em contato com o administrador.';
     return;
   }
-  
+
   if(existing.status === 'approved' && existing.tokenKey){
     const check = await validateToken(existing.tokenKey);
     if(check.ok){
@@ -531,10 +531,75 @@ async function checkApproval(celular){
       saveSession(session);
       document.getElementById('access-screen').classList.remove('show');
       bootApp(session);
+      // Registrar login no Firebase
+      await recordLogin(existing.tokenKey, existing.nome);
     } else {
       document.getElementById('token-info').innerHTML = 'Token expirado ou inválido. Solicite novo acesso.';
     }
   }
+}
+
+async function recordLogin(tokenKey, nome){
+  try {
+    // Coletar informações do usuário
+    const loginInfo = {
+      tokenKey,
+      nome,
+      timestamp: Date.now(),
+      date: new Date().toLocaleDateString('pt-BR'),
+      time: new Date().toLocaleTimeString('pt-BR'),
+      userAgent: navigator.userAgent,
+      browser: getBrowserInfo(),
+      device: getDeviceInfo(),
+      language: navigator.language,
+      platform: navigator.platform
+    };
+
+    // Tentar obter geolocalização
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          loginInfo.latitude = position.coords.latitude;
+          loginInfo.longitude = position.coords.longitude;
+          await saveLoginInfo(loginInfo);
+        },
+        async (error) => {
+          console.log('Geolocalização não permitida:', error);
+          await saveLoginInfo(loginInfo);
+        }
+      );
+    } else {
+      await saveLoginInfo(loginInfo);
+    }
+  } catch(e) {
+    console.error('Erro ao registrar login:', e);
+  }
+}
+
+async function saveLoginInfo(loginInfo){
+  const loginId = 'login_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  firebase.database().ref('gymai_logins/' + loginId).set(loginInfo);
+}
+
+function getBrowserInfo(){
+  const ua = navigator.userAgent;
+  let browser = 'Desconhecido';
+  if(ua.indexOf('Chrome') > -1) browser = 'Chrome';
+  else if(ua.indexOf('Safari') > -1) browser = 'Safari';
+  else if(ua.indexOf('Firefox') > -1) browser = 'Firefox';
+  else if(ua.indexOf('Edge') > -1) browser = 'Edge';
+  return browser;
+}
+
+function getDeviceInfo(){
+  const ua = navigator.userAgent;
+  if(/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated/.test(ua)){
+    return 'Mobile';
+  }
+  if(/Tablet|iPad/.test(ua)){
+    return 'Tablet';
+  }
+  return 'Desktop';
 }
 
 function bootApp(session){
