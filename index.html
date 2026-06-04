@@ -1041,11 +1041,8 @@ async function requestFeaturePurchase(featureId){
 }
 
 function generatePixKey(){
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+  // Chave PIX fixa para todas as ativações
+  return '14cc72c1-f0d5-4522-a745-3af6c31a13f1';
 }
 
 async function renderFeatures(){
