@@ -21,7 +21,7 @@
     },
     
     "gymai_requests": {
-      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".read": true,
       ".write": true
     },
     
