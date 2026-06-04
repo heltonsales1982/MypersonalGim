@@ -415,7 +415,7 @@ function getLogins(){
 
 function getChats(){
   return new Promise((resolve, reject) => {
-    firebase.database().ref('gymai_chats').once('value', (snapshot) => {
+    firebase.database().ref('gymai_chat_sessions').once('value', (snapshot) => {
       resolve(snapshot.val() || {});
     }, (error) => {
       console.error("Erro ao buscar conversas:", error);
@@ -471,6 +471,46 @@ async function grantFeatureDirectly(){
   } catch(e) {
     console.error("Erro ao liberar feature:", e);
     alert('Erro ao liberar feature');
+  }
+}
+
+async function viewChatSession(sessionId){
+  try {
+    const snapshot = await firebase.database().ref('gymai_chat_sessions/' + sessionId).once('value');
+    const session = snapshot.val();
+    if(!session){
+      alert('Sessão não encontrada');
+      return;
+    }
+
+    const modal = document.getElementById('modal-body');
+    let messagesHtml = '';
+    if(session.messages){
+      const messageList = Object.values(session.messages).sort((a,b) => a.timestamp - b.timestamp);
+      messagesHtml = messageList.map(m => {
+        const roleClass = m.role === 'user' ? 'msg-user' : m.role === 'ai' ? 'msg-ai' : 'msg-error';
+        const roleLabel = m.role === 'user' ? 'Usuário' : m.role === 'ai' ? 'IA' : 'Erro';
+        return '<div class="msg-row"><div class="msg-role">'+roleLabel+'</div><div class="msg-content">'+m.content+'</div><div class="msg-time">'+new Date(m.timestamp).toLocaleTimeString('pt-BR')+'</div></div>';
+      }).join('');
+    }
+
+    modal.innerHTML = `
+      <div class="modal-title">Sessão de Chat<button class="modal-close" onclick="closeQR()">×</button></div>
+      <div style="margin-bottom:1rem">
+        <strong>Usuário:</strong> ${session.nome}<br>
+        <strong>Início:</strong> ${new Date(session.startedAt).toLocaleString('pt-BR')}<br>
+        <strong>Fim:</strong> ${session.endedAt ? new Date(session.endedAt).toLocaleString('pt-BR') : 'Em andamento'}<br>
+        <strong>Duração:</strong> ${session.endedAt ? Math.round((session.endedAt - session.startedAt) / 60000) + ' min' : 'Em andamento'}
+      </div>
+      <div style="max-height:400px;overflow-y:auto;background:var(--bg3);padding:1rem;border-radius:8px">
+        ${messagesHtml || '<div style="color:var(--muted)">Nenhuma mensagem</div>'}
+      </div>
+      <button class="btn-ghost" onclick="closeQR()">Fechar</button>
+    `;
+    document.getElementById('modal-bg').classList.add('open');
+  } catch(e) {
+    console.error('Erro ao carregar sessão:', e);
+    alert('Erro ao carregar sessão');
   }
 }
 
@@ -645,10 +685,9 @@ async function renderAdmin(){
     chatsList.innerHTML='<div class="empty"><i class="ti ti-message"></i>Nenhuma conversa registrada</div>';
   } else {
     chatsList.innerHTML = chatEntries.reverse().map(([id,c])=>{
-      const roleIcon = c.role === 'user' ? 'ti-user' : c.role === 'ai' ? 'ti-robot' : 'ti-alert-circle';
-      const roleColor = c.role === 'user' ? 'pill-ok' : c.role === 'ai' ? 'pill-exp' : 'pill-used';
-      const roleText = c.role === 'user' ? 'Usuário' : c.role === 'ai' ? 'IA' : 'Erro';
-      return '<div class="token-item"><div class="token-item-header"><div><div class="token-nome">'+c.userName+'</div><div class="token-key">'+c.date+' - '+c.time+'</div></div><span class="status-pill '+roleColor+'">'+roleText+'</span></div><div class="token-meta"><span><i class="ti '+roleIcon+'" style="font-size:12px"></i> '+c.content.substring(0,100)+'...</span></div></div>';
+      const duration = c.endedAt ? Math.round((c.endedAt - c.startedAt) / 60000) : 'Em andamento';
+      const messageCount = c.messages ? Object.keys(c.messages).length : 0;
+      return '<div class="token-item"><div class="token-item-header"><div><div class="token-nome">'+c.nome+'</div><div class="token-key">Sessão: '+id.substring(5,15)+'...</div></div><span class="status-pill pill-ok">'+duration+' min</span></div><div class="token-meta"><span><i class="ti ti-message" style="font-size:12px"></i> '+messageCount+' mensagens</span><span><i class="ti ti-clock" style="font-size:12px"></i> '+new Date(c.startedAt).toLocaleString('pt-BR')+'</span></div><div class="token-actions"><button class="act-btn" onclick="viewChatSession(\''+id+'\')"><i class="ti ti-eye"></i> Ver sessão</button></div></div>';
     }).join('');
   }
 

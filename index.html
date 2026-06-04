@@ -458,6 +458,44 @@ select option{background:var(--bg2)}
         </div>
         <button class="btn-accent" onclick="gerarDieta()">Gerar Plano Alimentar</button>
       </div>
+
+      <!-- CARDIO E SUPLEMENTOS -->
+      <div class="card">
+        <h3><i class="ti ti-heartbeat"></i> Cardio e Suplementos</h3>
+        <div class="field-group">
+          <label>Selecione seu objetivo</label>
+          <select id="objetivo-cardio">
+            <option value="">Selecione</option>
+            <option value="massa">Ganho de massa</option>
+            <option value="peso">Perda de peso</option>
+            <option value="tonificacao">Tonificação</option>
+            <option value="gordura">Queima de gordura</option>
+            <option value="performance">Alta performance</option>
+            <option value="manutencao">Manutenção</option>
+          </select>
+        </div>
+        <button class="btn-accent" onclick="gerarCardioSuplementos()">Ver Recomendações</button>
+      </div>
+
+      <!-- JEJUM E SONO -->
+      <div class="card">
+        <h3><i class="ti ti-moon"></i> Jejum e Sono</h3>
+        <div class="field-group">
+          <label>Horas de jejum intermitente</label>
+          <select id="jejum-horas">
+            <option value="">Selecione</option>
+            <option value="12">12 horas (iniciante)</option>
+            <option value="14">14 horas (intermediário)</option>
+            <option value="16">16 horas (avançado)</option>
+            <option value="18">18 horas (expert)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Horas de sono por noite</label>
+          <input type="number" id="sono-horas" placeholder="Ex: 8" min="4" max="12">
+        </div>
+        <button class="btn-accent" onclick="salvarJejumSono()">Salvar</button>
+      </div>
     </div>
   </div>
   <nav class="nav">
@@ -897,6 +935,7 @@ function bootApp(session){
   loadPerfil();
   loadMedidas();
   loadMetas();
+  loadJejumSono();
 }
 
 // ══════════════════════════════════════════════
@@ -1092,6 +1131,9 @@ function renderEv(){
 // IA CHAT
 // ══════════════════════════════════════════════
 function qp(el){ document.getElementById('chat-in').value=el.textContent; sendIA(); }
+let chatSessionId = null;
+let chatTimeout = null;
+
 async function sendIA(){
   const inp = document.getElementById('chat-in');
   const btn = document.getElementById('send-btn');
@@ -1104,10 +1146,23 @@ async function sendIA(){
   document.getElementById('chat-msgs').appendChild(typing);
   scrollChat();
   const ctx = `Usuário: ${document.getElementById('user-nome-chip').textContent}. Séries hoje: ${logData.length}. Volume: ${Math.round(logData.reduce((a,l)=>a+(l.c*l.s*l.r),0))}kg.`;
-  
-  // Gravar mensagem do usuário no Firebase
-  await saveChatMessage('user', msg);
-  
+
+  // Criar ou continuar sessão de chat
+  if(!chatSessionId){
+    chatSessionId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    await firebase.database().ref('gymai_chat_sessions/' + chatSessionId).set({
+      tokenKey: getUserSession().tokenKey,
+      nome: document.getElementById('user-nome-chip').textContent,
+      startedAt: Date.now(),
+      lastActivity: Date.now(),
+      messages: []
+    });
+  }
+
+  // Atualizar última atividade e reiniciar timeout
+  clearTimeout(chatTimeout);
+  chatTimeout = setTimeout(endChatSession, 5 * 60 * 1000); // 5 minutos
+
   try{
     const res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{
@@ -1123,17 +1178,39 @@ async function sendIA(){
     typing.remove();
     const aiResponse = data.content?.[0]?.text||'Não consegui resposta. Tente novamente.';
     addMsg(aiResponse,'ai');
-    
-    // Gravar resposta da IA no Firebase
-    await saveChatMessage('ai', aiResponse);
+
+    // Salvar mensagens na sessão
+    await firebase.database().ref('gymai_chat_sessions/' + chatSessionId + '/messages').push({
+      role: 'user',
+      content: msg,
+      timestamp: Date.now()
+    });
+    await firebase.database().ref('gymai_chat_sessions/' + chatSessionId + '/messages').push({
+      role: 'ai',
+      content: aiResponse,
+      timestamp: Date.now()
+    });
+    await firebase.database().ref('gymai_chat_sessions/' + chatSessionId + '/lastActivity').set(Date.now());
   }catch(e){
     typing.remove();
     addMsg('Erro de conexão. Verifique a internet e tente novamente.','ai');
-    
-    // Gravar erro no Firebase
-    await saveChatMessage('error', 'Erro de conexão: ' + e.message);
+
+    // Salvar erro na sessão
+    await firebase.database().ref('gymai_chat_sessions/' + chatSessionId + '/messages').push({
+      role: 'error',
+      content: 'Erro de conexão: ' + e.message,
+      timestamp: Date.now()
+    });
   }
   btn.disabled=false; scrollChat();
+}
+
+async function endChatSession(){
+  if(chatSessionId){
+    await firebase.database().ref('gymai_chat_sessions/' + chatSessionId + '/endedAt').set(Date.now());
+    chatSessionId = null;
+    clearTimeout(chatTimeout);
+  }
 }
 
 async function saveChatMessage(role, content){
@@ -1165,6 +1242,15 @@ async function getUserFeatures(){
   try {
     const session = getUserSession();
     if(!session) return {};
+
+    // Verificar se o token ainda é válido
+    const check = await validateToken(session.tokenKey);
+    if(!check.ok){
+      // Token expirado, limpar features
+      await firebase.database().ref('gymai_features/' + session.tokenKey).remove();
+      return {};
+    }
+
     const snapshot = await firebase.database().ref('gymai_features/' + session.tokenKey).once('value');
     return snapshot.val() || {};
   } catch(e) {
@@ -1693,6 +1779,104 @@ async function gerarDieta(){
   } catch(e) {
     console.error('Erro ao gerar dieta:', e);
     alert('Erro ao gerar dieta');
+  }
+}
+
+// ══════════════════════════════════════════════
+// CARDIO E SUPLEMENTOS POR OBJETIVO
+// ══════════════════════════════════════════════
+const CARDIO_SUPLEMENTOS = {
+  massa: {
+    cardio: 'Cardio moderado 2-3x por semana (20-30 min) para manter saúde cardiovascular',
+    suplementos: ['Whey Protein (pós-treino)', 'Creatina (5g/dia)', 'BCAA (durante treino)', 'Multivitamínico']
+  },
+  peso: {
+    cardio: 'Cardio HIIT 4-5x por semana (20-30 min) para maximizar queima calórica',
+    suplementos: ['Whey Protein', 'Termogênico natural (chá verde)', 'L-Carnitina', 'Multivitamínico']
+  },
+  tonificacao: {
+    cardio: 'Cardio moderado 3x por semana (25-35 min) para definição',
+    suplementos: ['Whey Protein', 'BCAA', 'Glutamina', 'Multivitamínico']
+  },
+  gordura: {
+    cardio: 'Cardio HIIT 5-6x por semana (30-40 min) para queima de gordura',
+    suplementos: ['Whey Protein', 'L-Carnitina', 'Cafeína (pré-treino)', 'Ômega 3']
+  },
+  performance: {
+    cardio: 'Cardio intervalado 3-4x por semana (30 min) para resistência',
+    suplementos: ['Creatina', 'Beta-alanina', 'Cafeína', 'BCAA', 'Eletrólitos']
+  },
+  manutencao: {
+    cardio: 'Cardio moderado 3x por semana (30 min) para saúde geral',
+    suplementos: ['Whey Protein', 'Multivitamínico', 'Ômega 3']
+  }
+};
+
+function gerarCardioSuplementos(){
+  const objetivo = document.getElementById('objetivo-cardio').value;
+  if(!objetivo){
+    alert('Selecione um objetivo');
+    return;
+  }
+
+  const recomendacoes = CARDIO_SUPLEMENTOS[objetivo];
+  if(!recomendacoes){
+    alert('Objetivo inválido');
+    return;
+  }
+
+  const modal = document.getElementById('modal-body');
+  modal.innerHTML = `
+    <div class="modal-title">Cardio e Suplementos<button class="modal-close" onclick="closeModal()">×</button></div>
+    <div style="margin-bottom:1.5rem">
+      <h4 style="margin-bottom:0.5rem">Cardio</h4>
+      <p style="color:var(--muted)">${recomendacoes.cardio}</p>
+    </div>
+    <div>
+      <h4 style="margin-bottom:0.5rem">Suplementos Recomendados</h4>
+      <ul style="color:var(--muted)">
+        ${recomendacoes.suplementos.map(s => `<li>${s}</li>`).join('')}
+      </ul>
+    </div>
+    <button class="btn-ghost" onclick="closeModal()">Fechar</button>
+  `;
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+// ══════════════════════════════════════════════
+// JEJUM INTERMITENTE E SONO
+// ══════════════════════════════════════════════
+async function salvarJejumSono(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const jejumSono = {
+      jejumHoras: parseInt(document.getElementById('jejum-horas').value) || 0,
+      sonoHoras: parseInt(document.getElementById('sono-horas').value) || 0,
+      updatedAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_jejum_sono/' + session.tokenKey).set(jejumSono);
+    alert('Configurações salvas com sucesso!');
+  } catch(e) {
+    console.error('Erro ao salvar jejum e sono:', e);
+    alert('Erro ao salvar configurações');
+  }
+}
+
+async function loadJejumSono(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+    const snapshot = await firebase.database().ref('gymai_jejum_sono/' + session.tokenKey).once('value');
+    const jejumSono = snapshot.val();
+    if(jejumSono){
+      document.getElementById('jejum-horas').value = jejumSono.jejumHoras || '';
+      document.getElementById('sono-horas').value = jejumSono.sonoHoras || '';
+    }
+  } catch(e) {
+    console.error('Erro ao carregar jejum e sono:', e);
   }
 }
 function addMsg(txt,who){
