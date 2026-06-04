@@ -241,6 +241,26 @@ select option{background:var(--bg2)}
 .score-item{flex:1;min-width:80px;display:flex;flex-direction:column;gap:4px}
 .score-item-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
 .score-item-value{font-size:1.1rem;font-family:var(--font-head);font-weight:700;color:var(--accent)}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;top:0;left:0;height:100%;width:280px;background:var(--bg2);border-right:1px solid var(--border);transform:translateX(-100%);transition:transform 0.3s ease;z-index:1000;display:flex;flex-direction:column}
+.sidebar.open{transform:translateX(0)}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem;border-bottom:1px solid var(--border)}
+.sidebar-logo{font-family:var(--font-head);font-size:1.5rem;font-weight:800;letter-spacing:-0.5px}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-close{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;padding:8px}
+.sidebar-close:hover{color:var(--text)}
+.sidebar-menu{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.5rem}
+.sidebar-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:none;color:var(--text);font-size:15px;font-family:var(--font-body);cursor:pointer;border-radius:var(--r-sm);transition:background 0.2s;text-align:left}
+.sidebar-item:hover{background:var(--bg3)}
+.sidebar-item i{font-size:20px;color:var(--accent)}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);opacity:0;visibility:hidden;transition:opacity 0.3s,visibility 0.3s;z-index:999}
+.sidebar-overlay.open{opacity:1;visibility:visible}
+.hamburger-btn{position:fixed;top:1rem;left:1rem;z-index:1001;background:var(--accent);border:none;border-radius:50%;width:44px;height:44px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.hamburger-btn i{font-size:24px;color:#0a0a0f}
+@media(max-width:768px){
+  .hamburger-btn{display:flex}
+}
 </style>
 </head>
 <body>
@@ -656,14 +676,31 @@ select option{background:var(--bg2)}
       </div>
     </div>
   </div>
+
+  <!-- SIDEBAR MENU -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">Peak<span>OS</span></div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="sidebar-menu">
+      <button class="sidebar-item" onclick="toggleSidebar();goPage('log',2)"><i class="ti ti-plus-circle"></i>Log de Treino</button>
+      <button class="sidebar-item" onclick="toggleSidebar();goPage('scanner',5)"><i class="ti ti-camera"></i>Scanner Corporal</button>
+      <button class="sidebar-item" onclick="toggleSidebar();goPage('features',6)"><i class="ti ti-crown"></i>Features Premium</button>
+    </div>
+  </div>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- HAMBURGUER BUTTON -->
+  <button class="hamburger-btn" onclick="toggleSidebar()" id="hamburger-btn">
+    <i class="ti ti-menu-2"></i>
+  </button>
+
   <nav class="nav">
     <button class="nav-btn active" onclick="goPage('home',0)"><i class="ti ti-home"></i>Início</button>
     <button class="nav-btn" onclick="goPage('treinos',1)"><i class="ti ti-list"></i>Treinos</button>
-    <button class="nav-btn" onclick="goPage('log',2)"><i class="ti ti-plus-circle"></i>Log</button>
     <button class="nav-btn" onclick="goPage('ev',3)"><i class="ti ti-chart-line"></i>Evolução</button>
     <button class="nav-btn" onclick="goPage('ia',4)"><i class="ti ti-robot"></i>IA</button>
-    <button class="nav-btn" onclick="goPage('scanner',5)"><i class="ti ti-camera"></i>Scanner</button>
-    <button class="nav-btn" onclick="goPage('features',6)"><i class="ti ti-crown"></i>Features</button>
     <button class="nav-btn" onclick="goPage('perfil',7)"><i class="ti ti-user"></i>Perfil</button>
   </nav>
 </div>
@@ -1391,6 +1428,13 @@ async function salvarFicha(){
   }
 }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }
+
+function toggleSidebar(){
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
 
 // ══════════════════════════════════════════════
 // LOG
