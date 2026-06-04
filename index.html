@@ -203,6 +203,13 @@ select option{background:var(--bg2)}
 .analysis-stat .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
 .analysis-stat .stat-value{font-size:1.4rem;font-family:var(--font-head);font-weight:700;color:var(--accent);margin-top:4px}
 .analysis-notes{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:1rem;padding:1rem;background:var(--bg3);border-radius:var(--r-sm)}
+
+/* ── METAS INTELIGENTES ── */
+.metas-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.meta-item{background:var(--bg3);border-radius:var(--r-sm);padding:1rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.meta-item i{font-size:20px;color:var(--accent)}
+.meta-item .meta-value{font-size:1.2rem;font-family:var(--font-head);font-weight:700;color:var(--text)}
+.meta-item .meta-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
 </style>
 </head>
 <body>
@@ -450,18 +457,12 @@ select option{background:var(--bg2)}
 
       <!-- METAS DIÁRIAS -->
       <div class="card">
-        <h3><i class="ti ti-target"></i> Metas Diárias</h3>
-        <div class="input-row">
-          <div class="field-group">
-            <label>Passos por dia</label>
-            <input type="number" id="meta-passos" placeholder="Ex: 10000">
-          </div>
-          <div class="field-group">
-            <label>Água por dia (ml)</label>
-            <input type="number" id="meta-agua" placeholder="Ex: 2500">
-          </div>
+        <h3><i class="ti ti-target"></i> Metas Diárias IA</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:1rem">A IA gera metas personalizadas baseadas no seu perfil e objetivo</p>
+        <div id="metas-ia-container">
+          <div class="empty"><i class="ti ti-robot"></i>Clique abaixo para gerar metas inteligentes</div>
         </div>
-        <button class="btn-accent" onclick="saveMetas()">Salvar Metas</button>
+        <button class="btn-accent" onclick="gerarMetasInteligentes()">Gerar Metas com IA</button>
       </div>
 
       <!-- OBJETIVO DE TREINO -->
@@ -1783,8 +1784,12 @@ async function loadMetas(){
     const snapshot = await firebase.database().ref('gymai_metas/' + session.tokenKey).once('value');
     const metas = snapshot.val();
     if(metas){
-      document.getElementById('meta-passos').value = metas.passos || '';
-      document.getElementById('meta-agua').value = metas.agua || '';
+      if(metas.geradoPorIA){
+        renderMetasInteligentes(metas);
+      } else {
+        document.getElementById('meta-passos').value = metas.passos || '';
+        document.getElementById('meta-agua').value = metas.agua || '';
+      }
     }
   } catch(e) {
     console.error('Erro ao carregar metas:', e);
@@ -2364,6 +2369,149 @@ async function loadAnalysisHistory(){
   } catch(e) {
     console.error('Erro ao carregar histórico:', e);
   }
+}
+
+// ══════════════════════════════════════════════
+// METAS INTELIGENTES GERADAS POR IA
+// ══════════════════════════════════════════════
+async function gerarMetasInteligentes(){
+  const perfil = await getUserProfile();
+  const medidas = await getUserMedidas();
+  const jejumSono = await getUserJejumSono();
+
+  if(!perfil || !perfil.peso || !perfil.altura){
+    alert('Preencha seu perfil (peso e altura) primeiro para gerar metas personalizadas');
+    return;
+  }
+
+  try{
+    const btn = document.querySelector('#pg-perfil .card:nth-child(3) .btn-accent');
+    btn.disabled = true;
+    btn.textContent = 'Gerando metas...';
+
+    let prompt = 'Gere metas diárias personalizadas para este usuário:\n\n';
+    prompt += `Dados do usuário:\n`;
+    prompt += `- Peso atual: ${perfil.peso}kg\n`;
+    prompt += `- Altura: ${perfil.altura}cm\n`;
+    prompt += `- Peso objetivo: ${perfil.pesoObjetivo}kg\n`;
+    prompt += `- IMC: ${calcularIMC(perfil.peso, perfil.altura).toFixed(1)}\n`;
+
+    if(medidas){
+      prompt += `\nMedidas corporais:\n`;
+      prompt += `- Cintura: ${medidas.cintura}cm\n`;
+      prompt += `- Peito: ${medidas.peito}cm\n`;
+    }
+
+    if(jejumSono){
+      prompt += `\nHábitos atuais:\n`;
+      prompt += `- Jejum: ${jejumSono.jejumHoras}h\n`;
+      prompt += `- Sono: ${jejumSono.sonoHoras}h\n`;
+    }
+
+    prompt += `\nGere metas diárias realistas e alcançáveis para:\n`;
+    prompt += `1. Passos diários\n`;
+    prompt += `2. Consumo de água (ml)\n`;
+    prompt += `3. Calorias alvo\n`;
+    prompt += `4. Proteína (g)\n`;
+    prompt += `5. Sono recomendado (h)\n`;
+    prompt += `6. Tempo de treino (min)\n\n`;
+    prompt += `Responda apenas com os valores numéricos, um por linha, no formato: "Categoria: Valor".`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{
+        'Content-Type':'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        system:'Você é um especialista em metas de fitness e nutrição. Gere metas realistas baseadas nos dados do usuário.',
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    const data = await res.json();
+    const aiResponse = data.content?.[0]?.text||'Não foi possível gerar metas.';
+
+    // Extrair metas da resposta
+    const metas = {
+      passos: extractValue(aiResponse, 'Passos') || 10000,
+      agua: extractValue(aiResponse, 'Água') || 2500,
+      calorias: extractValue(aiResponse, 'Calorias') || 2000,
+      proteina: extractValue(aiResponse, 'Proteína') || 150,
+      sono: extractValue(aiResponse, 'Sono') || 8,
+      treino: extractValue(aiResponse, 'Treino') || 45,
+      geradoPorIA: true,
+      dataGeracao: Date.now()
+    };
+
+    // Salvar metas
+    const session = getUserSession();
+    if(session){
+      await firebase.database().ref('gymai_metas/' + session.tokenKey).set(metas);
+    }
+
+    // Mostrar metas geradas
+    renderMetasInteligentes(metas);
+
+    btn.disabled = false;
+    btn.textContent = 'Gerar Metas com IA';
+
+  } catch(e){
+    console.error('Erro ao gerar metas:', e);
+    alert('Erro ao gerar metas. Verifique sua conexão e tente novamente.');
+    const btn = document.querySelector('#pg-perfil .card:nth-child(3) .btn-accent');
+    btn.disabled = false;
+    btn.textContent = 'Gerar Metas com IA';
+  }
+}
+
+function extractValue(text, keyword){
+  const regex = new RegExp(keyword + '[:\\s]*(\\d+)', 'i');
+  const match = text.match(regex);
+  return match ? parseInt(match[1]) : null;
+}
+
+function renderMetasInteligentes(metas){
+  const container = document.getElementById('metas-ia-container');
+  container.innerHTML = `
+    <div class="metas-grid">
+      <div class="meta-item">
+        <i class="ti ti-walk"></i>
+        <span class="meta-value">${metas.passos}</span>
+        <span class="meta-label">Passos/dia</span>
+      </div>
+      <div class="meta-item">
+        <i class="ti ti-droplet"></i>
+        <span class="meta-value">${metas.agua}ml</span>
+        <span class="meta-label">Água</span>
+      </div>
+      <div class="meta-item">
+        <i class="ti ti-flame"></i>
+        <span class="meta-value">${metas.calorias}</span>
+        <span class="meta-label">Calorias</span>
+      </div>
+      <div class="meta-item">
+        <i class="ti ti-egg"></i>
+        <span class="meta-value">${metas.proteina}g</span>
+        <span class="meta-label">Proteína</span>
+      </div>
+      <div class="meta-item">
+        <i class="ti ti-moon"></i>
+        <span class="meta-value">${metas.sono}h</span>
+        <span class="meta-label">Sono</span>
+      </div>
+      <div class="meta-item">
+        <i class="ti ti-dumbbell"></i>
+        <span class="meta-value">${metas.treino}min</span>
+        <span class="meta-label">Treino</span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--success);margin-top:0.5rem">
+      <i class="ti ti-check"></i> Gerado por IA em ${new Date(metas.dataGeracao).toLocaleDateString('pt-BR')}
+    </div>
+  `;
 }
 </script>
 </body>
