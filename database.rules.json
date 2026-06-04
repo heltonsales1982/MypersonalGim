@@ -9,7 +9,7 @@
     },
     
     "gymai_admin_tokens": {
-      ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
+      ".read": true,
       ".write": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)"
     },
     
