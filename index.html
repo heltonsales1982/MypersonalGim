@@ -332,6 +332,41 @@ select option{background:var(--bg2)}
       <p class="page-sub">Desbloqueie funcionalidades avançadas para potencializar seus resultados</p>
       <div class="features-grid" id="features-grid"></div>
     </div>
+
+    <!-- PERFIL -->
+    <div class="page" id="pg-perfil">
+      <h2 class="page-title"><i class="ti ti-user"></i> Meu Perfil</h2>
+      <p class="page-sub">Configure suas informações pessoais para treinos personalizados</p>
+      <div class="card">
+        <div class="field-group">
+          <label>Sexo</label>
+          <select id="perfil-sexo">
+            <option value="">Selecione</option>
+            <option value="M">Masculino</option>
+            <option value="F">Feminino</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Data de nascimento</label>
+          <input type="date" id="perfil-nascimento">
+        </div>
+        <div class="input-row">
+          <div class="field-group">
+            <label>Peso atual (kg)</label>
+            <input type="number" id="perfil-peso" step="0.1" placeholder="Ex: 75.5">
+          </div>
+          <div class="field-group">
+            <label>Altura (cm)</label>
+            <input type="number" id="perfil-altura" placeholder="Ex: 175">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Peso objetivo (kg)</label>
+          <input type="number" id="perfil-peso-objetivo" step="0.1" placeholder="Ex: 70.0">
+        </div>
+        <button class="btn-accent" onclick="savePerfil()">Salvar Perfil</button>
+      </div>
+    </div>
   </div>
   <nav class="nav">
     <button class="nav-btn active" onclick="goPage('home',0)"><i class="ti ti-home"></i>Início</button>
@@ -340,6 +375,7 @@ select option{background:var(--bg2)}
     <button class="nav-btn" onclick="goPage('ev',3)"><i class="ti ti-chart-line"></i>Evolução</button>
     <button class="nav-btn" onclick="goPage('ia',4)"><i class="ti ti-robot"></i>IA</button>
     <button class="nav-btn" onclick="goPage('features',5)"><i class="ti ti-crown"></i>Features</button>
+    <button class="nav-btn" onclick="goPage('perfil',6)"><i class="ti ti-user"></i>Perfil</button>
   </nav>
 </div>
 
@@ -766,6 +802,7 @@ function bootApp(session){
   renderLog();
   renderValidityCard(session.tokenKey);
   renderFeatures();
+  loadPerfil();
 }
 
 // ══════════════════════════════════════════════
@@ -1103,6 +1140,92 @@ function copyPixKey(){
   }).catch(err => {
     console.error('Erro ao copiar:', err);
   });
+}
+
+// ══════════════════════════════════════════════
+// PERFIL DO USUÁRIO
+// ══════════════════════════════════════════════
+async function getUserProfile(){
+  try {
+    const session = getUserSession();
+    if(!session) return null;
+    const snapshot = await firebase.database().ref('gymai_profile/' + session.tokenKey).once('value');
+    return snapshot.val();
+  } catch(e) {
+    console.error('Erro ao buscar perfil:', e);
+    return null;
+  }
+}
+
+async function savePerfil(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const perfil = {
+      sexo: document.getElementById('perfil-sexo').value,
+      nascimento: document.getElementById('perfil-nascimento').value,
+      peso: parseFloat(document.getElementById('perfil-peso').value) || 0,
+      altura: parseInt(document.getElementById('perfil-altura').value) || 0,
+      pesoObjetivo: parseFloat(document.getElementById('perfil-peso-objetivo').value) || 0,
+      updatedAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_profile/' + session.tokenKey).set(perfil);
+    alert('Perfil salvo com sucesso!');
+  } catch(e) {
+    console.error('Erro ao salvar perfil:', e);
+    alert('Erro ao salvar perfil');
+  }
+}
+
+async function loadPerfil(){
+  const perfil = await getUserProfile();
+  if(perfil){
+    document.getElementById('perfil-sexo').value = perfil.sexo || '';
+    document.getElementById('perfil-nascimento').value = perfil.nascimento || '';
+    document.getElementById('perfil-peso').value = perfil.peso || '';
+    document.getElementById('perfil-altura').value = perfil.altura || '';
+    document.getElementById('perfil-peso-objetivo').value = perfil.pesoObjetivo || '';
+  }
+}
+
+// ══════════════════════════════════════════════
+// CÁLCULO DE IMC, GORDURA %, TIPO FÍSICO
+// ══════════════════════════════════════════════
+function calcularIMC(peso, altura){
+  if(!peso || !altura) return 0;
+  const alturaM = altura / 100;
+  return peso / (alturaM * alturaM);
+}
+
+function calcularGorduraPercentual(peso, altura, idade, sexo){
+  if(!peso || !altura || !idade || !sexo) return 0;
+  const imc = calcularIMC(peso, altura);
+  if(sexo === 'M'){
+    return (1.20 * imc) + (0.23 * idade) - 16.2;
+  } else {
+    return (1.20 * imc) + (0.23 * idade) - 5.4;
+  }
+}
+
+function getTipoFisico(imc){
+  if(imc < 18.5) return 'Baixo';
+  if(imc < 25) return 'Saudável';
+  if(imc < 30) return 'Alto';
+  return 'Obeso';
+}
+
+function getIdade(nascimento){
+  if(!nascimento) return 0;
+  const hoje = new Date();
+  const nasc = new Date(nascimento);
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const mes = hoje.getMonth() - nasc.getMonth();
+  if(mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())){
+    idade--;
+  }
+  return idade;
 }
 function addMsg(txt,who){
   const d=document.createElement('div');
