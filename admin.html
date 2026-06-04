@@ -365,33 +365,16 @@ function renderAdmin(){
   const ativos = entries.filter(([,t])=>!(t.expiresAt&&now>t.expiresAt)&&!(t.maxUses&&t.uses>=t.maxUses)).length;
   const exp = total - ativos;
   const pending = reqEntries.filter(([,r])=>r.status === 'pending').length;
-  document.getElementById('admin-stats').innerHTML = `
-    <div class="stat"><div class="stat-label">Total gerados</div><div class="stat-val">${total}</div></div>
-    <div class="stat"><div class="stat-label">Ativos</div><div class="stat-val" style="color:var(--success)">${ativos}</div></div>
-    <div class="stat"><div class="stat-label">Pendentes</div><div class="stat-val" style="color:var(--warn)">${pending}</div></div>`;
+  document.getElementById('admin-stats').innerHTML = '<div class="stat"><div class="stat-label">Total gerados</div><div class="stat-val">'+total+'</div></div><div class="stat"><div class="stat-label">Ativos</div><div class="stat-val" style="color:var(--success)">'+ativos+'</div></div><div class="stat"><div class="stat-label">Pendentes</div><div class="stat-val" style="color:var(--warn)">'+pending+'</div></div>';
 
   // Render solicitações pendentes
   const pendingReqs = reqEntries.filter(([,r])=>r.status === 'pending');
   if(!pendingReqs.length){
     reqList.innerHTML='<div class="empty"><i class="ti ti-user-check"></i>Nenhuma solicitação pendente</div>';
   } else {
-    reqList.innerHTML = pendingReqs.map(([id,r])=>`
-      <div class="token-item">
-        <div class="token-item-header">
-          <div>
-            <div class="token-nome">${r.nome}</div>
-            <div class="token-key">${r.celular}</div>
-          </div>
-          <span class="status-pill pill-used">Pendente</span>
-        </div>
-        <div class="token-meta">
-          <span><i class="ti ti-clock" style="font-size:12px"></i> ${new Date(r.createdAt).toLocaleString('pt-BR')}</span>
-        </div>
-        <div class="token-actions">
-          <button class="act-btn" onclick="aprovarSolicitacao('${id}')"><i class="ti ti-check"></i> Aprovar</button>
-          <button class="act-btn danger" onclick="rejeitarSolicitacao('${id}')"><i class="ti ti-x"></i> Rejeitar</button>
-        </div>
-      </div>`).join('');
+    reqList.innerHTML = pendingReqs.map(([id,r])=>{
+      return '<div class="token-item"><div class="token-item-header"><div><div class="token-nome">'+r.nome+'</div><div class="token-key">'+r.celular+'</div></div><span class="status-pill pill-used">Pendente</span></div><div class="token-meta"><span><i class="ti ti-clock" style="font-size:12px"></i> '+new Date(r.createdAt).toLocaleString('pt-BR')+'</span></div><div class="token-actions"><button class="act-btn" onclick="aprovarSolicitacao(\''+id+'\')"><i class="ti ti-check"></i> Aprovar</button><button class="act-btn danger" onclick="rejeitarSolicitacao(\''+id+'\')"><i class="ti ti-x"></i> Rejeitar</button></div></div>';
+    }).join('');
   }
 
   // Render tokens
@@ -409,26 +392,7 @@ function renderAdmin(){
     const diasR = t.expiresAt ? Math.max(0,Math.ceil((t.expiresAt-now)/86400000)) : null;
     const baseUrl = document.getElementById('g-url').value.trim() || DEFAULT_URL;
     const url = baseUrl.endsWith('/') ? baseUrl+'?t='+id : baseUrl+'?t='+id;
-    return `
-      <div class="token-item">
-        <div class="token-item-header">
-          <div>
-            <div class="token-nome">${t.nome}</div>
-            ${t.celular ? `<div class="token-key">${t.celular}</div>` : ''}
-          </div>
-          <span class="status-pill ${statusClass}">${statusTxt}</span>
-        </div>
-        <div class="token-meta">
-          <span><i class="ti ti-calendar" style="font-size:12px"></i> ${t.expiresAt ? diasR+' dias rest.' : 'Sem limite'}</span>
-          <span><i class="ti ti-click" style="font-size:12px"></i> ${t.uses||0}${t.maxUses?'/'+t.maxUses:''} usos</span>
-          <span><i class="ti ti-clock" style="font-size:12px"></i> ${new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
-        </div>
-        <div class="token-actions">
-          <button class="act-btn" onclick="reexibirQR('${id}')"><i class="ti ti-qrcode"></i> Ver QR</button>
-          <button class="act-btn" onclick="renovar('${id}')"><i class="ti ti-refresh"></i> +30 dias</button>
-          <button class="act-btn danger" onclick="revogar('${id}')"><i class="ti ti-trash"></i> Revogar</button>
-        </div>
-      </div>`;
+    return '<div class="token-item"><div class="token-item-header"><div><div class="token-nome">'+t.nome+'</div>'+(t.celular?'<div class="token-key">'+t.celular+'</div>':'')+'</div><span class="status-pill '+statusClass+'">'+statusTxt+'</span></div><div class="token-meta"><span><i class="ti ti-calendar" style="font-size:12px"></i> '+(t.expiresAt?diasR+' dias rest.':'Sem limite')+'</span><span><i class="ti ti-click" style="font-size:12px"></i> '+(t.uses||0)+(t.maxUses?'/'+t.maxUses:'')+' usos</span><span><i class="ti ti-clock" style="font-size:12px"></i> '+new Date(t.createdAt).toLocaleDateString('pt-BR')+'</span></div><div class="token-actions"><button class="act-btn" onclick="reexibirQR(\''+id+'\')"><i class="ti ti-qrcode"></i> Ver QR</button><button class="act-btn" onclick="renovar(\''+id+'\')"><i class="ti ti-refresh"></i> +30 dias</button><button class="act-btn danger" onclick="revogar(\''+id+'\')"><i class="ti ti-trash"></i> Revogar</button></div></div>';
   }).join('');
 }
 
