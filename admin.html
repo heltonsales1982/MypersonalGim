@@ -216,13 +216,16 @@ const DEFAULT_URL = location.origin + location.pathname.replace('admin.html','')
 function doLogin(){
   const pwd = document.getElementById('admin-pwd').value;
   const errEl = document.getElementById('login-err');
+  console.log('Tentando login. Senha digitada:', pwd, 'Senha correta:', ADMIN_PASSWORD);
   if(pwd === ADMIN_PASSWORD){
     document.getElementById('login-screen').classList.add('hide');
     document.getElementById('admin-app').classList.add('show');
     document.getElementById('g-url').value = DEFAULT_URL;
     document.getElementById('admin-id-display').textContent = 'helton@gymai';
+    console.log('Login bem-sucedido. Renderizando admin...');
     renderAdmin();
   } else {
+    console.log('Senha incorreta');
     errEl.classList.add('show');
     setTimeout(()=>errEl.classList.remove('show'),3000);
   }
