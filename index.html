@@ -3038,6 +3038,22 @@ async function gerarRelatorio(){
     document.getElementById('report-content').innerHTML = html;
     document.getElementById('report-container').style.display = 'block';
 
+    // Salvar relatório no Firebase
+    const reportData = {
+      period,
+      startDate,
+      endDate: Date.now(),
+      totalSeries,
+      totalVolume,
+      treinoDays: Array.from(treinoDays),
+      diasMarcados,
+      medidas,
+      metas,
+      generatedAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_relatorios/' + session.tokenKey).push(reportData);
+
   } catch(e) {
     console.error('Erro ao gerar relatório:', e);
     alert('Erro ao gerar relatório');
