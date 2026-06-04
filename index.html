@@ -366,6 +366,62 @@ select option{background:var(--bg2)}
         </div>
         <button class="btn-accent" onclick="savePerfil()">Salvar Perfil</button>
       </div>
+
+      <!-- MEDIDAS CORPORAIS -->
+      <div class="card">
+        <h3><i class="ti ti-ruler"></i> Medidas Corporais</h3>
+        <div class="input-row">
+          <div class="field-group">
+            <label>Cintura (cm)</label>
+            <input type="number" id="medida-cintura" step="0.1" placeholder="Ex: 80.0">
+          </div>
+          <div class="field-group">
+            <label>Peito (cm)</label>
+            <input type="number" id="medida-peito" step="0.1" placeholder="Ex: 100.0">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="field-group">
+            <label>Braço esquerdo (cm)</label>
+            <input type="number" id="medida-braco-esq" step="0.1" placeholder="Ex: 35.0">
+          </div>
+          <div class="field-group">
+            <label>Braço direito (cm)</label>
+            <input type="number" id="medida-braco-dir" step="0.1" placeholder="Ex: 35.0">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="field-group">
+            <label>Coxa esquerda (cm)</label>
+            <input type="number" id="medida-coxa-esq" step="0.1" placeholder="Ex: 55.0">
+          </div>
+          <div class="field-group">
+            <label>Coxa direita (cm)</label>
+            <input type="number" id="medida-coxa-dir" step="0.1" placeholder="Ex: 55.0">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Abdômen (cm)</label>
+          <input type="number" id="medida-abdomen" step="0.1" placeholder="Ex: 85.0">
+        </div>
+        <button class="btn-accent" onclick="saveMedidas()">Salvar Medidas</button>
+      </div>
+
+      <!-- METAS DIÁRIAS -->
+      <div class="card">
+        <h3><i class="ti ti-target"></i> Metas Diárias</h3>
+        <div class="input-row">
+          <div class="field-group">
+            <label>Passos por dia</label>
+            <input type="number" id="meta-passos" placeholder="Ex: 10000">
+          </div>
+          <div class="field-group">
+            <label>Água por dia (ml)</label>
+            <input type="number" id="meta-agua" placeholder="Ex: 2500">
+          </div>
+        </div>
+        <button class="btn-accent" onclick="saveMetas()">Salvar Metas</button>
+      </div>
     </div>
   </div>
   <nav class="nav">
@@ -803,6 +859,8 @@ function bootApp(session){
   renderValidityCard(session.tokenKey);
   renderFeatures();
   loadPerfil();
+  loadMedidas();
+  loadMetas();
 }
 
 // ══════════════════════════════════════════════
@@ -1226,6 +1284,90 @@ function getIdade(nascimento){
     idade--;
   }
   return idade;
+}
+
+// ══════════════════════════════════════════════
+// MEDIDAS CORPORAIS
+// ══════════════════════════════════════════════
+async function saveMedidas(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const medidas = {
+      cintura: parseFloat(document.getElementById('medida-cintura').value) || 0,
+      peito: parseFloat(document.getElementById('medida-peito').value) || 0,
+      bracoEsq: parseFloat(document.getElementById('medida-braco-esq').value) || 0,
+      bracoDir: parseFloat(document.getElementById('medida-braco-dir').value) || 0,
+      coxaEsq: parseFloat(document.getElementById('medida-coxa-esq').value) || 0,
+      coxaDir: parseFloat(document.getElementById('medida-coxa-dir').value) || 0,
+      abdomen: parseFloat(document.getElementById('medida-abdomen').value) || 0,
+      updatedAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_medidas/' + session.tokenKey).set(medidas);
+    alert('Medidas salvas com sucesso!');
+  } catch(e) {
+    console.error('Erro ao salvar medidas:', e);
+    alert('Erro ao salvar medidas');
+  }
+}
+
+async function loadMedidas(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+    const snapshot = await firebase.database().ref('gymai_medidas/' + session.tokenKey).once('value');
+    const medidas = snapshot.val();
+    if(medidas){
+      document.getElementById('medida-cintura').value = medidas.cintura || '';
+      document.getElementById('medida-peito').value = medidas.peito || '';
+      document.getElementById('medida-braco-esq').value = medidas.bracoEsq || '';
+      document.getElementById('medida-braco-dir').value = medidas.bracoDir || '';
+      document.getElementById('medida-coxa-esq').value = medidas.coxaEsq || '';
+      document.getElementById('medida-coxa-dir').value = medidas.coxaDir || '';
+      document.getElementById('medida-abdomen').value = medidas.abdomen || '';
+    }
+  } catch(e) {
+    console.error('Erro ao carregar medidas:', e);
+  }
+}
+
+// ══════════════════════════════════════════════
+// METAS DIÁRIAS
+// ══════════════════════════════════════════════
+async function saveMetas(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const metas = {
+      passos: parseInt(document.getElementById('meta-passos').value) || 0,
+      agua: parseInt(document.getElementById('meta-agua').value) || 0,
+      updatedAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_metas/' + session.tokenKey).set(metas);
+    alert('Metas salvas com sucesso!');
+  } catch(e) {
+    console.error('Erro ao salvar metas:', e);
+    alert('Erro ao salvar metas');
+  }
+}
+
+async function loadMetas(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+    const snapshot = await firebase.database().ref('gymai_metas/' + session.tokenKey).once('value');
+    const metas = snapshot.val();
+    if(metas){
+      document.getElementById('meta-passos').value = metas.passos || '';
+      document.getElementById('meta-agua').value = metas.agua || '';
+    }
+  } catch(e) {
+    console.error('Erro ao carregar metas:', e);
+  }
 }
 function addMsg(txt,who){
   const d=document.createElement('div');
