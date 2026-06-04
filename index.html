@@ -391,11 +391,22 @@ select option{background:var(--bg2)}
         <div class="field-group">
           <label>Exercício</label>
           <select id="log-ex" onchange="iniciarSerie()">
-            <option>Supino reto</option><option>Supino inclinado</option><option>Crucifixo</option>
-            <option>Tríceps corda</option><option>Tríceps testa</option><option>Agachamento</option>
-            <option>Leg press</option><option>Cadeira extensora</option><option>Cadeira flexora</option>
-            <option>Rosca direta</option><option>Rosca martelo</option><option>Remada curvada</option>
-            <option>Puxada frontal</option><option>Stiff</option><option>Panturrilha</option>
+            <option value="">Selecione um exercício...</option>
+            <option value="Supino reto">Supino reto</option>
+            <option value="Supino inclinado">Supino inclinado</option>
+            <option value="Crucifixo">Crucifixo</option>
+            <option value="Tríceps corda">Tríceps corda</option>
+            <option value="Tríceps testa">Tríceps testa</option>
+            <option value="Agachamento">Agachamento</option>
+            <option value="Leg press">Leg press</option>
+            <option value="Cadeira extensora">Cadeira extensora</option>
+            <option value="Cadeira flexora">Cadeira flexora</option>
+            <option value="Rosca direta">Rosca direta</option>
+            <option value="Rosca martelo">Rosca martelo</option>
+            <option value="Remada curvada">Remada curvada</option>
+            <option value="Puxada frontal">Puxada frontal</option>
+            <option value="Stiff">Stiff</option>
+            <option value="Panturrilha">Panturrilha</option>
           </select>
         </div>
         <div id="serie-rapida" style="display:none">
@@ -1172,6 +1183,7 @@ function bootApp(session){
   loadAnalysisHistory();
   calculatePerformanceScore();
   loadDiasFeitos();
+  loadExerciciosPersonalizados();
 }
 
 // ══════════════════════════════════════════════
@@ -1239,6 +1251,85 @@ async function loadDiasFeitos(){
     });
   } catch(e) {
     console.error('Erro ao carregar dias de treino:', e);
+  }
+}
+
+async function loadExerciciosPersonalizados(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const snapshot = await firebase.database().ref('gymai_fichas/' + session.tokenKey).once('value');
+    const fichas = snapshot.val();
+
+    if(fichas){
+      const select = document.getElementById('log-ex');
+      const currentValue = select.value;
+
+      // Remover exercícios personalizados anteriores (exceto os padrão)
+      const options = select.querySelectorAll('option');
+      options.forEach(opt => {
+        if(opt.dataset.custom === 'true'){
+          opt.remove();
+        }
+      });
+
+      // Adicionar exercícios das fichas personalizadas
+      Object.values(fichas).forEach(ficha => {
+        if(ficha.exercicios){
+          ficha.exercicios.forEach(exercicio => {
+            const option = document.createElement('option');
+            option.value = exercicio.nome;
+            option.textContent = `${exercicio.nome} (${ficha.nome})`;
+            option.dataset.custom = 'true';
+            select.appendChild(option);
+          });
+        }
+      });
+
+      // Restaurar valor selecionado se ainda existir
+      if(currentValue){
+        select.value = currentValue;
+      }
+    }
+
+    // Listener para atualização automática
+    firebase.database().ref('gymai_fichas/' + session.tokenKey).on('value', (snapshot) => {
+      const fichas = snapshot.val();
+
+      const select = document.getElementById('log-ex');
+      const currentValue = select.value;
+
+      // Remover exercícios personalizados anteriores (exceto os padrão)
+      const options = select.querySelectorAll('option');
+      options.forEach(opt => {
+        if(opt.dataset.custom === 'true'){
+          opt.remove();
+        }
+      });
+
+      // Adicionar exercícios das fichas personalizadas
+      if(fichas){
+        Object.values(fichas).forEach(ficha => {
+          if(ficha.exercicios){
+            ficha.exercicios.forEach(exercicio => {
+              const option = document.createElement('option');
+              option.value = exercicio.nome;
+              option.textContent = `${exercicio.nome} (${ficha.nome})`;
+              option.dataset.custom = 'true';
+              select.appendChild(option);
+            });
+          }
+        });
+      }
+
+      // Restaurar valor selecionado se ainda existir
+      if(currentValue){
+        select.value = currentValue;
+      }
+    });
+  } catch(e) {
+    console.error('Erro ao carregar exercícios personalizados:', e);
   }
 }
 async function salvarDiaTreino(dia){
