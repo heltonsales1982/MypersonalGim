@@ -1399,23 +1399,32 @@ async function salvarDiaTreino(dia){
 }
 
 function mostrarMapaCheckin(location){
-  document.getElementById('modal-body').innerHTML = `
-    <div class="modal-title">Check-in realizado<button class="modal-close" onclick="closeModal()">×</button></div>
-    <div id="checkin-map" style="height:300px;border-radius:var(--r-sm);margin-bottom:1rem"></div>
-    <div class="card-sub">Localização registrada com sucesso</div>
-    <button class="btn-main" onclick="closeModal()">Fechar</button>
-  `;
-  document.getElementById('modal-bg').classList.add('open');
+  try {
+    document.getElementById('modal-body').innerHTML = `
+      <div class="modal-title">Check-in realizado<button class="modal-close" onclick="closeModal()">×</button></div>
+      <div id="checkin-map" style="height:300px;border-radius:var(--r-sm);margin-bottom:1rem"></div>
+      <div class="card-sub">Localização registrada com sucesso</div>
+      <button class="btn-main" onclick="closeModal()">Fechar</button>
+    `;
+    document.getElementById('modal-bg').classList.add('open');
 
-  // Inicializar mapa
-  setTimeout(() => {
-    const map = L.map('checkin-map').setView([location.latitude, location.longitude], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-    L.marker([location.latitude, location.longitude]).addTo(map)
-      .bindPopup('Check-in de treino').openPopup();
-  }, 100);
+    // Inicializar mapa
+    setTimeout(() => {
+      try {
+        const map = L.map('checkin-map').setView([location.latitude, location.longitude], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+        L.marker([location.latitude, location.longitude]).addTo(map)
+          .bindPopup('Check-in de treino').openPopup();
+      } catch(e) {
+        console.error('Erro ao inicializar mapa:', e);
+        document.getElementById('checkin-map').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Erro ao carregar mapa</div>';
+      }
+    }, 200);
+  } catch(e) {
+    console.error('Erro ao mostrar mapa de check-in:', e);
+  }
 }
 
 function renderDias(){
