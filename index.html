@@ -1190,28 +1190,51 @@ function bootApp(session){
 // VALIDADE
 // ══════════════════════════════════════════════
 function renderValidityCard(tk){
-  const tokens = getTokens();
-  const t = tokens[tk];
-  if(!t){ document.getElementById('validity-card').innerHTML='<div style="color:var(--muted);font-size:13px">Informações de acesso indisponíveis</div>'; return; }
-  const now = Date.now();
-  const exp = t.expiresAt;
-  const uses = t.uses || 0;
-  const maxU = t.maxUses;
-  let html = '';
-  if(exp){
-    const dias = Math.max(0, Math.ceil((exp-now)/86400000));
-    const total = Math.ceil((exp - (t.createdAt||now))/86400000) || 30;
-    const pct = Math.min(100, Math.round(dias/total*100));
-    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:var(--muted)">Validade</span><span style="font-size:13px;font-weight:600;color:${dias<5?'var(--danger)':'var(--success)'}">${dias} dias restantes</span></div>
-    <div class="validity-bar"><div class="validity-fill" style="width:${pct}%;background:${dias<5?'var(--danger)':'var(--accent)'}"></div></div>`;
+  try {
+    const tokens = getTokens();
+    const t = tokens[tk];
+    const card = document.getElementById('validity-card');
+
+    if(!card){
+      console.error('Elemento validity-card não encontrado');
+      return;
+    }
+
+    if(!t){
+      card.innerHTML='<div style="color:var(--muted);font-size:13px">Informações de acesso indisponíveis</div>';
+      return;
+    }
+
+    const now = Date.now();
+    const exp = t.expiresAt;
+    const uses = t.uses || 0;
+    const maxU = t.maxUses;
+    let html = '';
+
+    if(exp){
+      const dias = Math.max(0, Math.ceil((exp-now)/86400000));
+      const total = Math.ceil((exp - (t.createdAt||now))/86400000) || 30;
+      const pct = Math.min(100, Math.round(dias/total*100));
+      html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:var(--muted)">Validade</span><span style="font-size:13px;font-weight:600;color:${dias<5?'var(--danger)':'var(--success)'}">${dias} dias restantes</span></div>
+      <div class="validity-bar"><div class="validity-fill" style="width:${pct}%;background:${dias<5?'var(--danger)':'var(--accent)'}"></div></div>`;
+    }
+
+    if(maxU){
+      const pctU = Math.min(100, Math.round(uses/maxU*100));
+      html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;margin-top:10px"><span style="font-size:13px;color:var(--muted)">Usos</span><span style="font-size:13px;font-weight:600">${uses} / ${maxU}</span></div>
+      <div class="validity-bar"><div class="validity-fill" style="width:${pctU}%;background:var(--accent2)"></div></div>`;
+    }
+
+    if(!exp && !maxU) html = '<div style="font-size:13px;color:var(--success)">✓ Acesso ilimitado</div>';
+
+    card.innerHTML = html;
+  } catch(e) {
+    console.error('Erro ao renderizar card de validade:', e);
+    const card = document.getElementById('validity-card');
+    if(card){
+      card.innerHTML='<div style="color:var(--danger);font-size:13px">Erro ao carregar informações de acesso</div>';
+    }
   }
-  if(maxU){
-    const pctU = Math.min(100, Math.round(uses/maxU*100));
-    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;margin-top:10px"><span style="font-size:13px;color:var(--muted)">Usos</span><span style="font-size:13px;font-weight:600">${uses} / ${maxU}</span></div>
-    <div class="validity-bar"><div class="validity-fill" style="width:${pctU}%;background:var(--accent2)"></div></div>`;
-  }
-  if(!exp && !maxU) html = '<div style="font-size:13px;color:var(--success)">✓ Acesso ilimitado</div>';
-  document.getElementById('validity-card').innerHTML = html;
 }
 
 // ══════════════════════════════════════════════
@@ -1398,7 +1421,12 @@ function mostrarMapaCheckin(location){
 function renderDias(){
   const hoje = new Date().getDay();
   document.getElementById('dia-grid').innerHTML = DIAS_LABEL.map((d,i)=>{
-    if(i===hoje) return `<div class="dia dia-hoje"><span>${d}</span><span class="dia-label">Hj</span></div>`;
+    if(i===hoje && !DIAS_FEITOS.includes(i)){
+      return `<div class="dia dia-hoje" onclick="salvarDiaTreino(${i})" style="cursor:pointer"><span>${d}</span><span class="dia-label">Check-in</span></div>`;
+    }
+    if(i===hoje && DIAS_FEITOS.includes(i)){
+      return `<div class="dia dia-hoje dia-ok"><span>✓</span><span class="dia-label">Hj</span></div>`;
+    }
     if(DIAS_FEITOS.includes(i)) return `<div class="dia dia-ok"><span>✓</span><span class="dia-label">${d}</span></div>`;
     return `<div class="dia dia-vazio"><span class="dia-label">${d}</span></div>`;
   }).join('');
