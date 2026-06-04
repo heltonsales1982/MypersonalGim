@@ -578,6 +578,8 @@ select option{background:var(--bg2)}
             <option value="gordura">Queima de gordura</option>
             <option value="performance">Alta performance</option>
             <option value="manutencao">Manutenção</option>
+            <option value="caminhada">Caminhada</option>
+            <option value="pedalada">Pedalada</option>
           </select>
         </div>
         <button class="btn-accent" onclick="gerarTreino()">Gerar Treino Personalizado</button>
@@ -2458,6 +2460,32 @@ const TREINOS_POR_OBJETIVO = {
       {nome: 'Remada', series: 3, repeticoes: '12-15', descanso: 60},
       {nome: 'HIIT: Polichinelo', series: 2, repeticoes: '30s', descanso: 30},
       {nome: 'Abdominal', series: 3, repeticoes: '15-20', descanso: 45}
+    ]
+  },
+  caminhada: {
+    nome: 'Caminhada',
+    descricao: 'Programa de caminhada para saúde cardiovascular e bem-estar',
+    duracao: 30,
+    descanso: 0,
+    intervalo: 0,
+    exercicios: [
+      {nome: 'Caminhada Leve', series: 1, repeticoes: '15 min', descanso: 0},
+      {nome: 'Caminhada Moderada', series: 1, repeticoes: '10 min', descanso: 0},
+      {nome: 'Caminhada Rápida', series: 1, repeticoes: '5 min', descanso: 0},
+      {nome: 'Alongamento de Pernas', series: 1, repeticoes: '5 min', descanso: 0}
+    ]
+  },
+  pedalada: {
+    nome: 'Pedalada',
+    descricao: 'Programa de pedalada para condicionamento cardiovascular',
+    duracao: 35,
+    descanso: 0,
+    intervalo: 0,
+    exercicios: [
+      {nome: 'Pedalada Leve', series: 1, repeticoes: '10 min', descanso: 0},
+      {nome: 'Pedalada Moderada', series: 1, repeticoes: '15 min', descanso: 0},
+      {nome: 'Pedalada Intensa', series: 1, repeticoes: '5 min', descanso: 0},
+      {nome: 'Pedalada Leve (Recuperação)', series: 1, repeticoes: '5 min', descanso: 0}
     ]
   }
 };
