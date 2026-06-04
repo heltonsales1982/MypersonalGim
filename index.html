@@ -469,8 +469,8 @@ async function requestAccess(){
   const existing = Object.values(requests).find(r => r.celular === celular);
   if(existing){
     if(existing.status === 'pending'){
-      errEl.textContent='Você já tem uma solicitação pendente. Aguarde aprovação.';
-      errEl.classList.add('show');
+      // Mostrar tela de verificação para solicitação pendente
+      showPendingScreen(celular, existing.nome);
       return;
     }
     if(existing.status === 'approved'){
@@ -478,7 +478,7 @@ async function requestAccess(){
       if(existing.tokenKey){
         const check = await validateToken(existing.tokenKey);
         if(check.ok){
-          const session = {nome, tokenKey:existing.tokenKey, createdAt:Date.now()};
+          const session = {nome: existing.nome, tokenKey:existing.tokenKey, createdAt:Date.now()};
           saveSession(session);
           document.getElementById('access-screen').classList.remove('show');
           bootApp(session);
@@ -498,14 +498,18 @@ async function requestAccess(){
   };
   saveRequests(requests);
 
+  showPendingScreen(celular, nome);
+}
+
+function showPendingScreen(celular, nome){
   document.getElementById('access-title').textContent = 'Solicitação enviada';
   document.getElementById('field-nome').closest('.field').style.display='none';
   document.getElementById('field-celular').closest('.field').style.display='none';
   document.querySelector('.btn-accent').style.display='none';
-  document.getElementById('token-info').innerHTML = 'Sua solicitação foi enviada ao administrador.<br>Você receberá acesso assim que for aprovada.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\')">Verificar aprovação</button>';
+  document.getElementById('token-info').innerHTML = 'Sua solicitação foi enviada ao administrador.<br>Você receberá acesso assim que for aprovada.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\', \''+nome+'\')">Verificar aprovação</button>';
 }
 
-async function checkApproval(celular){
+async function checkApproval(celular, nome){
   const requests = await getRequests();
   const existing = Object.values(requests).find(r => r.celular === celular);
 
@@ -515,7 +519,7 @@ async function checkApproval(celular){
   }
 
   if(existing.status === 'pending'){
-    document.getElementById('token-info').innerHTML = 'Ainda pendente. Aguarde aprovação do administrador.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\')">Verificar novamente</button>';
+    document.getElementById('token-info').innerHTML = 'Ainda pendente. Aguarde aprovação do administrador.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\', \''+nome+'\')">Verificar novamente</button>';
     return;
   }
 
