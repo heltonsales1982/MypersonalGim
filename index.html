@@ -2651,11 +2651,22 @@ function gerarCardioSuplementos(){
 async function salvarJejumSono(){
   try {
     const session = getUserSession();
-    if(!session) return;
+    if(!session){
+      alert('Sessão não encontrada. Faça login novamente.');
+      return;
+    }
+
+    const jejumHoras = document.getElementById('jejum-horas').value;
+    const sonoHoras = document.getElementById('sono-horas').value;
+
+    if(!jejumHoras && !sonoHoras){
+      alert('Preencha pelo menos um campo (horas de jejum ou horas de sono).');
+      return;
+    }
 
     const jejumSono = {
-      jejumHoras: parseInt(document.getElementById('jejum-horas').value) || 0,
-      sonoHoras: parseInt(document.getElementById('sono-horas').value) || 0,
+      jejumHoras: jejumHoras ? parseInt(jejumHoras) : 0,
+      sonoHoras: sonoHoras ? parseInt(sonoHoras) : 0,
       updatedAt: Date.now()
     };
 
@@ -2663,7 +2674,7 @@ async function salvarJejumSono(){
     alert('Configurações salvas com sucesso!');
   } catch(e) {
     console.error('Erro ao salvar jejum e sono:', e);
-    alert('Erro ao salvar configurações');
+    alert('Erro ao salvar configurações: ' + e.message);
   }
 }
 
