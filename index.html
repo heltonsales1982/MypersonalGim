@@ -2228,16 +2228,32 @@ function getIdade(nascimento){
 async function saveMedidas(){
   try {
     const session = getUserSession();
-    if(!session) return;
+    if(!session){
+      alert('Sessão não encontrada. Faça login novamente.');
+      return;
+    }
+
+    const cintura = document.getElementById('medida-cintura').value;
+    const peito = document.getElementById('medida-peito').value;
+    const bracoEsq = document.getElementById('medida-braco-esq').value;
+    const bracoDir = document.getElementById('medida-braco-dir').value;
+    const coxaEsq = document.getElementById('medida-coxa-esq').value;
+    const coxaDir = document.getElementById('medida-coxa-dir').value;
+    const abdomen = document.getElementById('medida-abdomen').value;
+
+    if(!cintura && !peito && !bracoEsq && !bracoDir && !coxaEsq && !coxaDir && !abdomen){
+      alert('Preencha pelo menos uma medida.');
+      return;
+    }
 
     const medidas = {
-      cintura: parseFloat(document.getElementById('medida-cintura').value) || 0,
-      peito: parseFloat(document.getElementById('medida-peito').value) || 0,
-      bracoEsq: parseFloat(document.getElementById('medida-braco-esq').value) || 0,
-      bracoDir: parseFloat(document.getElementById('medida-braco-dir').value) || 0,
-      coxaEsq: parseFloat(document.getElementById('medida-coxa-esq').value) || 0,
-      coxaDir: parseFloat(document.getElementById('medida-coxa-dir').value) || 0,
-      abdomen: parseFloat(document.getElementById('medida-abdomen').value) || 0,
+      cintura: cintura ? parseFloat(cintura) : 0,
+      peito: peito ? parseFloat(peito) : 0,
+      bracoEsq: bracoEsq ? parseFloat(bracoEsq) : 0,
+      bracoDir: bracoDir ? parseFloat(bracoDir) : 0,
+      coxaEsq: coxaEsq ? parseFloat(coxaEsq) : 0,
+      coxaDir: coxaDir ? parseFloat(coxaDir) : 0,
+      abdomen: abdomen ? parseFloat(abdomen) : 0,
       updatedAt: Date.now()
     };
 
@@ -2245,7 +2261,7 @@ async function saveMedidas(){
     alert('Medidas salvas com sucesso!');
   } catch(e) {
     console.error('Erro ao salvar medidas:', e);
-    alert('Erro ao salvar medidas');
+    alert('Erro ao salvar medidas: ' + e.message);
   }
 }
 
