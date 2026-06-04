@@ -502,7 +502,39 @@ async function requestAccess(){
   document.getElementById('field-nome').closest('.field').style.display='none';
   document.getElementById('field-celular').closest('.field').style.display='none';
   document.querySelector('.btn-accent').style.display='none';
-  document.getElementById('token-info').innerHTML = 'Sua solicitação foi enviada ao administrador.<br>Você receberá acesso assim que for aprovada.';
+  document.getElementById('token-info').innerHTML = 'Sua solicitação foi enviada ao administrador.<br>Você receberá acesso assim que for aprovada.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\')">Verificar aprovação</button>';
+}
+
+async function checkApproval(celular){
+  const requests = await getRequests();
+  const existing = Object.values(requests).find(r => r.celular === celular);
+  
+  if(!existing){
+    document.getElementById('token-info').innerHTML = 'Solicitação não encontrada. Tente novamente.';
+    return;
+  }
+  
+  if(existing.status === 'pending'){
+    document.getElementById('token-info').innerHTML = 'Ainda pendente. Aguarde aprovação do administrador.<br><br><button class="btn-accent" onclick="checkApproval(\''+celular+'\')">Verificar novamente</button>';
+    return;
+  }
+  
+  if(existing.status === 'rejected'){
+    document.getElementById('token-info').innerHTML = 'Sua solicitação foi rejeitada. Entre em contato com o administrador.';
+    return;
+  }
+  
+  if(existing.status === 'approved' && existing.tokenKey){
+    const check = await validateToken(existing.tokenKey);
+    if(check.ok){
+      const session = {nome: existing.nome, tokenKey:existing.tokenKey, createdAt:Date.now()};
+      saveSession(session);
+      document.getElementById('access-screen').classList.remove('show');
+      bootApp(session);
+    } else {
+      document.getElementById('token-info').innerHTML = 'Token expirado ou inválido. Solicite novo acesso.';
+    }
+  }
 }
 
 function bootApp(session){
