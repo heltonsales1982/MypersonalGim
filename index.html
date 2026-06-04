@@ -210,6 +210,16 @@ select option{background:var(--bg2)}
 .meta-item i{font-size:20px;color:var(--accent)}
 .meta-item .meta-value{font-size:1.2rem;font-family:var(--font-head);font-weight:700;color:var(--text)}
 .meta-item .meta-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+
+/* ── PERFORMANCE SCORE ── */
+.performance-score-card{background:linear-gradient(135deg,var(--bg3),var(--card));border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem;display:flex;gap:1.5rem;align-items:center}
+.score-circle{width:100px;height:100px;border-radius:50%;background:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.score-circle .score-value{font-size:2rem;font-family:var(--font-head);font-weight:800;color:#0a0a0f}
+.score-circle .score-label{font-size:10px;color:rgba(0,0,0,0.6);text-transform:uppercase;letter-spacing:0.05em}
+.score-breakdown{flex:1;display:flex;flex-wrap:wrap;gap:10px}
+.score-item{flex:1;min-width:80px;display:flex;flex-direction:column;gap:4px}
+.score-item-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.score-item-value{font-size:1.1rem;font-family:var(--font-head);font-weight:700;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -251,6 +261,35 @@ select option{background:var(--bg2)}
   <div class="pages">
     <!-- HOME -->
     <div class="page active" id="pg-home">
+      <div class="performance-score-card">
+        <div class="score-circle">
+          <span class="score-value" id="performance-score">--</span>
+          <span class="score-label">Performance Score</span>
+        </div>
+        <div class="score-breakdown">
+          <div class="score-item">
+            <span class="score-item-label">Treino</span>
+            <span class="score-item-value" id="score-treino">--%</span>
+          </div>
+          <div class="score-item">
+            <span class="score-item-label">Sono</span>
+            <span class="score-item-value" id="score-sono">--%</span>
+          </div>
+          <div class="score-item">
+            <span class="score-item-label">Nutrição</span>
+            <span class="score-item-value" id="score-nutricao">--%</span>
+          </div>
+          <div class="score-item">
+            <span class="score-item-label">Cardio</span>
+            <span class="score-item-value" id="score-cardio">--%</span>
+          </div>
+          <div class="score-item">
+            <span class="score-item-label">Consistência</span>
+            <span class="score-item-value" id="score-consistencia">--%</span>
+          </div>
+        </div>
+      </div>
+
       <div class="dia-grid" id="dia-grid"></div>
       <div class="stat-grid">
         <div class="stat">
@@ -1036,6 +1075,7 @@ function bootApp(session){
   loadMetas();
   loadJejumSono();
   loadAnalysisHistory();
+  calculatePerformanceScore();
 }
 
 // ══════════════════════════════════════════════
@@ -2512,6 +2552,75 @@ function renderMetasInteligentes(metas){
       <i class="ti ti-check"></i> Gerado por IA em ${new Date(metas.dataGeracao).toLocaleDateString('pt-BR')}
     </div>
   `;
+}
+
+// ══════════════════════════════════════════════
+// PERFORMANCE SCORE
+// ══════════════════════════════════════════════
+async function calculatePerformanceScore(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const metas = await getUserMetas();
+    const jejumSono = await getUserJejumSono();
+    const perfil = await getUserProfile();
+
+    // Score de Treino (baseado em séries hoje vs meta)
+    const seriesHoje = logData.length;
+    const metaSeries = metas && metas.treino ? Math.floor(metas.treino / 10) : 20;
+    const scoreTreino = Math.min(100, Math.round((seriesHoje / metaSeries) * 100));
+
+    // Score de Sono (baseado em horas dormidas vs meta)
+    const sonoAtual = jejumSono && jejumSono.sonoHoras ? jejumSono.sonoHoras : 7;
+    const metaSono = metas && metas.sono ? metas.sono : 8;
+    const scoreSono = Math.min(100, Math.round((sonoAtual / metaSono) * 100));
+
+    // Score de Nutrição (baseado em água vs meta)
+    const aguaAtual = metas && metas.agua ? metas.agua : 2000;
+    const metaAgua = 2500;
+    const scoreNutricao = Math.min(100, Math.round((aguaAtual / metaAgua) * 100));
+
+    // Score de Cardio (baseado em passos vs meta)
+    const passosAtual = metas && metas.passos ? metas.passos : 5000;
+    const metaPassos = 10000;
+    const scoreCardio = Math.min(100, Math.round((passosAtual / metaPassos) * 100));
+
+    // Score de Consistência (baseado em dias de treino na semana)
+    const diasTreino = 3;
+    const metaDias = 5;
+    const scoreConsistencia = Math.min(100, Math.round((diasTreino / metaDias) * 100));
+
+    // Score total (média ponderada)
+    const scoreTotal = Math.round(
+      (scoreTreino * 0.3) +
+      (scoreSono * 0.2) +
+      (scoreNutricao * 0.2) +
+      (scoreCardio * 0.15) +
+      (scoreConsistencia * 0.15)
+    );
+
+    // Atualizar UI
+    document.getElementById('performance-score').textContent = scoreTotal;
+    document.getElementById('score-treino').textContent = scoreTreino + '%';
+    document.getElementById('score-sono').textContent = scoreSono + '%';
+    document.getElementById('score-nutricao').textContent = scoreNutricao + '%';
+    document.getElementById('score-cardio').textContent = scoreCardio + '%';
+    document.getElementById('score-consistencia').textContent = scoreConsistencia + '%';
+
+    // Ajustar cor do score total
+    const scoreCircle = document.querySelector('.score-circle');
+    if(scoreTotal >= 80){
+      scoreCircle.style.background = 'var(--success)';
+    } else if(scoreTotal >= 60){
+      scoreCircle.style.background = 'var(--accent)';
+    } else {
+      scoreCircle.style.background = 'var(--danger)';
+    }
+
+  } catch(e) {
+    console.error('Erro ao calcular performance score:', e);
+  }
 }
 </script>
 </body>
