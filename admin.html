@@ -254,6 +254,28 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
         <h2><i class="ti ti-shopping-cart"></i> Pagamentos PIX</h2>
         <div class="token-list" id="purchases-list"></div>
       </div>
+      <div class="card">
+        <h2><i class="ti ti-gift"></i> Liberar Feature Diretamente</h2>
+        <div class="field-group">
+          <label>Token Key do usuário</label>
+          <input type="text" id="grant-token" placeholder="Token key do usuário">
+        </div>
+        <div class="field-group">
+          <label>Feature</label>
+          <select id="grant-feature">
+            <option value="treinos_personalizados">Treinos Personalizados</option>
+            <option value="dieta_personalizada">Dieta Personalizada</option>
+            <option value="cardio_suplementos">Cardio e Suplementos</option>
+            <option value="metas_diarias">Metas Diárias</option>
+            <option value="apple_health">Integração Apple Health</option>
+            <option value="medidas_corporais">Medidas Corporais</option>
+            <option value="analise_foto">Análise de Foto</option>
+            <option value="jejum_sono">Jejum e Sono</option>
+            <option value="perfil_completo">Perfil Completo</option>
+          </select>
+        </div>
+        <button class="btn-main" onclick="grantFeatureDirectly()">Liberar Feature</button>
+      </div>
     </div>
   </div>
 </div>
@@ -423,6 +445,25 @@ async function confirmPurchase(purchaseId){
     renderAdmin();
   } catch(e) {
     console.error("Erro ao confirmar pagamento:", e);
+  }
+}
+
+async function grantFeatureDirectly(){
+  try {
+    const tokenKey = document.getElementById('grant-token').value.trim();
+    const featureId = document.getElementById('grant-feature').value;
+
+    if(!tokenKey){
+      alert('Digite o token key do usuário');
+      return;
+    }
+
+    await firebase.database().ref('gymai_features/' + tokenKey + '/' + featureId).set(true);
+    alert('Feature liberada com sucesso!');
+    document.getElementById('grant-token').value = '';
+  } catch(e) {
+    console.error("Erro ao liberar feature:", e);
+    alert('Erro ao liberar feature');
   }
 }
 
