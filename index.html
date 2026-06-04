@@ -1588,22 +1588,25 @@ function removeExercicioTemp(index){
 }
 
 async function salvarFicha(){
-  const nome = document.getElementById('ficha-nome').value.trim();
-  const grupos = document.getElementById('ficha-grupos').value.trim();
-
-  if(!nome){
-    alert('Digite o nome da ficha');
-    return;
-  }
-
-  if(exerciciosTemp.length === 0){
-    alert('Adicione pelo menos um exercício');
-    return;
-  }
-
   try {
+    const nome = document.getElementById('ficha-nome').value.trim();
+    const grupos = document.getElementById('ficha-grupos').value.trim();
+
+    if(!nome){
+      alert('Digite o nome da ficha');
+      return;
+    }
+
+    if(exerciciosTemp.length === 0){
+      alert('Adicione pelo menos um exercício');
+      return;
+    }
+
     const session = getUserSession();
-    if(!session) return;
+    if(!session){
+      alert('Sessão não encontrada. Faça login novamente.');
+      return;
+    }
 
     const fichaId = 'ficha_' + Date.now();
     const ficha = {
@@ -1621,7 +1624,7 @@ async function salvarFicha(){
     renderTreinos();
   } catch(e) {
     console.error('Erro ao salvar ficha:', e);
-    alert('Erro ao salvar ficha');
+    alert('Erro ao salvar ficha: ' + e.message);
   }
 }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }
