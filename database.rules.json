@@ -17,7 +17,7 @@
     
     "gymai_requests": {
       ".read": "auth != null && (auth.token.email == 'heltonsales@icloud.com' || auth.token.admin == true)",
-      ".write": "auth != null"
+      ".write": true
     },
     
     "gymai_log": {
