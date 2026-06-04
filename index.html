@@ -711,6 +711,8 @@ select option{background:var(--bg2)}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -1189,14 +1191,14 @@ async function loadDiasFeitos(){
     const snapshot = await firebase.database().ref('gymai_dias_treino/' + session.tokenKey).once('value');
     const dias = snapshot.val();
     if(dias){
-      DIAS_FEITOS = dias;
+      DIAS_FEITOS = Object.keys(dias).map(key => parseInt(dias[key].dia));
     }
 
     // Listener para atualização automática
     firebase.database().ref('gymai_dias_treino/' + session.tokenKey).on('value', (snapshot) => {
       const dias = snapshot.val();
       if(dias){
-        DIAS_FEITOS = dias;
+        DIAS_FEITOS = Object.keys(dias).map(key => parseInt(dias[key].dia));
         renderDias();
       }
     });
@@ -1210,14 +1212,63 @@ async function salvarDiaTreino(dia){
     if(!session) return;
 
     if(!DIAS_FEITOS.includes(dia)){
+      // Obter localização
+      let location = null;
+      if(navigator.geolocation){
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true});
+          });
+          location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            timestamp: Date.now()
+          };
+        } catch(e) {
+          console.log('Geolocalização não disponível:', e);
+        }
+      }
+
       DIAS_FEITOS.push(dia);
-      await firebase.database().ref('gymai_dias_treino/' + session.tokenKey).set(DIAS_FEITOS);
+      const diaData = {
+        dia,
+        timestamp: Date.now(),
+        location
+      };
+
+      await firebase.database().ref('gymai_dias_treino/' + session.tokenKey + '/' + dia).set(diaData);
       renderDias();
+
+      // Mostrar mapa se localização foi obtida
+      if(location){
+        mostrarMapaCheckin(location);
+      }
     }
   } catch(e) {
     console.error('Erro ao salvar dia de treino:', e);
   }
 }
+
+function mostrarMapaCheckin(location){
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">Check-in realizado<button class="modal-close" onclick="closeModal()">×</button></div>
+    <div id="checkin-map" style="height:300px;border-radius:var(--r-sm);margin-bottom:1rem"></div>
+    <div class="card-sub">Localização registrada com sucesso</div>
+    <button class="btn-main" onclick="closeModal()">Fechar</button>
+  `;
+  document.getElementById('modal-bg').classList.add('open');
+
+  // Inicializar mapa
+  setTimeout(() => {
+    const map = L.map('checkin-map').setView([location.latitude, location.longitude], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+    L.marker([location.latitude, location.longitude]).addTo(map)
+      .bindPopup('Check-in de treino').openPopup();
+  }, 100);
+}
+
 function renderDias(){
   const hoje = new Date().getDay();
   document.getElementById('dia-grid').innerHTML = DIAS_LABEL.map((d,i)=>{
