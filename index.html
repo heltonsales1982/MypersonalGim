@@ -1191,6 +1191,15 @@ async function loadDiasFeitos(){
     if(dias){
       DIAS_FEITOS = dias;
     }
+
+    // Listener para atualização automática
+    firebase.database().ref('gymai_dias_treino/' + session.tokenKey).on('value', (snapshot) => {
+      const dias = snapshot.val();
+      if(dias){
+        DIAS_FEITOS = dias;
+        renderDias();
+      }
+    });
   } catch(e) {
     console.error('Erro ao carregar dias de treino:', e);
   }
@@ -1239,6 +1248,17 @@ async function renderTreinos(){
       } else {
         renderTreinosPadroes();
       }
+
+      // Listener para atualização automática
+      firebase.database().ref('gymai_fichas/' + session.tokenKey).on('value', (snapshot) => {
+        const fichas = snapshot.val();
+        if(fichas){
+          const fichasArray = Object.values(fichas);
+          renderFichasPersonalizadas(fichasArray);
+        } else {
+          renderTreinosPadroes();
+        }
+      });
     } catch(e) {
       console.error('Erro ao buscar fichas personalizadas:', e);
       renderTreinosPadroes();
@@ -2624,22 +2644,43 @@ async function loadAnalysisHistory(){
 
     if(!analyses){
       document.getElementById('analysis-history').innerHTML = '<div class="empty"><i class="ti ti-history"></i>Nenhuma análise ainda</div>';
-      return;
+    } else {
+      const analysisArray = Object.values(analyses).sort((a, b) => b.date - a.date);
+
+      const historyHtml = analysisArray.map(a => `
+        <div class="log-row">
+          <div>
+            <div class="log-nome">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
+            <div class="log-sub">BF: ${a.bfPercent}% | Massa Magra: ${a.leanMass}kg</div>
+          </div>
+          <div class="log-carga">${a.bfPercent}%</div>
+        </div>
+      `).join('');
+
+      document.getElementById('analysis-history').innerHTML = historyHtml;
     }
 
-    const analysisArray = Object.values(analyses).sort((a, b) => b.date - a.date);
+    // Listener para atualização automática
+    firebase.database().ref('gymai_body_scanner/' + session.tokenKey).on('value', (snapshot) => {
+      const analyses = snapshot.val();
+      if(!analyses){
+        document.getElementById('analysis-history').innerHTML = '<div class="empty"><i class="ti ti-history"></i>Nenhuma análise ainda</div>';
+      } else {
+        const analysisArray = Object.values(analyses).sort((a, b) => b.date - a.date);
 
-    const historyHtml = analysisArray.map(a => `
-      <div class="log-row">
-        <div>
-          <div class="log-nome">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
-          <div class="log-sub">BF: ${a.bfPercent}% | Massa Magra: ${a.leanMass}kg</div>
-        </div>
-        <div class="log-carga">${a.bfPercent}%</div>
-      </div>
-    `).join('');
+        const historyHtml = analysisArray.map(a => `
+          <div class="log-row">
+            <div>
+              <div class="log-nome">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
+              <div class="log-sub">BF: ${a.bfPercent}% | Massa Magra: ${a.leanMass}kg</div>
+            </div>
+            <div class="log-carga">${a.bfPercent}%</div>
+          </div>
+        `).join('');
 
-    document.getElementById('analysis-history').innerHTML = historyHtml;
+        document.getElementById('analysis-history').innerHTML = historyHtml;
+      }
+    });
 
   } catch(e) {
     console.error('Erro ao carregar histórico:', e);
