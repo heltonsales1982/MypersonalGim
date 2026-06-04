@@ -110,16 +110,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 
 <!-- LOGIN ADMIN -->
 <div id="login-screen">
-  <div class="login-logo">Gym<span>AI</span></div>
+  <div class="login-logo">Peak<span>OS</span></div>
   <div class="login-sub">Painel de administração</div>
   <div class="login-card">
     <h2>🔐 Acesso restrito</h2>
     <div class="field">
-      <label>Senha de admin</label>
-      <input type="password" id="admin-pwd" placeholder="Sua senha de administrador" onkeydown="if(event.key==='Enter')doLogin()">
+      <label>Email</label>
+      <input type="email" id="admin-email" placeholder="admin@peakos.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="admin-pwd" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn-accent" onclick="doLogin()">Entrar</button>
-    <div class="login-err" id="login-err">Senha incorreta.</div>
+    <div class="login-err" id="login-err">Credenciais inválidas.</div>
   </div>
 </div>
 
@@ -127,7 +131,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 <div id="admin-app">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="admin-logo">Gym<span>AI</span></div>
+      <div class="admin-logo">Peak<span>OS</span></div>
       <div class="admin-badge">Admin</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
@@ -303,6 +307,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script>
 // ══════════════════════════════════════════════
 // CONFIGURAÇÃO FIREBASE
@@ -329,7 +334,6 @@ try {
 // ══════════════════════════════════════════════
 // CONFIG — ALTERE AQUI
 // ══════════════════════════════════════════════
-const ADMIN_PASSWORD = '2020Helton@'; // TROQUE PARA SUA SENHA
 const ADMIN_STORE_KEY = 'gymai_admin_tokens';
 const REQUESTS_KEY = 'gymai_requests';
 const DEFAULT_URL = location.origin + location.pathname.replace('admin.html','').replace('gymai/','MypersonalGim/');
@@ -338,28 +342,46 @@ const DEFAULT_URL = location.origin + location.pathname.replace('admin.html','')
 // LOGIN
 // ══════════════════════════════════════════════
 function doLogin(){
+  const email = document.getElementById('admin-email').value;
   const pwd = document.getElementById('admin-pwd').value;
   const errEl = document.getElementById('login-err');
-  console.log('Tentando login. Senha digitada:', pwd, 'Senha correta:', ADMIN_PASSWORD);
-  if(pwd === ADMIN_PASSWORD){
-    document.getElementById('login-screen').classList.add('hide');
-    document.getElementById('admin-app').classList.add('show');
-    document.getElementById('g-url').value = DEFAULT_URL;
-    document.getElementById('admin-id-display').textContent = 'helton@gymai';
-    console.log('Login bem-sucedido. Renderizando admin...');
-    renderAdmin();
-    // Iniciar autorefresh a cada 10 segundos
-    setInterval(renderAdmin, 10000);
-  } else {
-    console.log('Senha incorreta');
+
+  if(!email || !pwd){
+    errEl.textContent = 'Preencha email e senha';
     errEl.classList.add('show');
     setTimeout(()=>errEl.classList.remove('show'),3000);
+    return;
   }
+
+  firebase.auth().signInWithEmailAndPassword(email, pwd)
+    .then((userCredential) => {
+      document.getElementById('login-screen').classList.add('hide');
+      document.getElementById('admin-app').classList.add('show');
+      document.getElementById('g-url').value = DEFAULT_URL;
+      document.getElementById('admin-id-display').textContent = userCredential.user.email;
+      console.log('Login bem-sucedido. Renderizando admin...');
+      renderAdmin();
+      // Iniciar autorefresh a cada 10 segundos
+      setInterval(renderAdmin, 10000);
+    })
+    .catch((error) => {
+      console.error('Erro no login:', error);
+      errEl.textContent = 'Credenciais inválidas';
+      errEl.classList.add('show');
+      setTimeout(()=>errEl.classList.remove('show'),3000);
+    });
 }
 function doLogout(){
-  document.getElementById('login-screen').classList.remove('hide');
-  document.getElementById('admin-app').classList.remove('show');
-  document.getElementById('admin-pwd').value='';
+  firebase.auth().signOut()
+    .then(() => {
+      document.getElementById('login-screen').classList.remove('hide');
+      document.getElementById('admin-app').classList.remove('show');
+      document.getElementById('admin-email').value='';
+      document.getElementById('admin-pwd').value='';
+    })
+    .catch((error) => {
+      console.error('Erro no logout:', error);
+    });
 }
 document.getElementById('admin-pwd').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 
