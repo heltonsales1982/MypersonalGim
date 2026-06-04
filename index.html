@@ -440,6 +440,24 @@ select option{background:var(--bg2)}
         </div>
         <button class="btn-accent" onclick="gerarTreino()">Gerar Treino Personalizado</button>
       </div>
+
+      <!-- DIETA -->
+      <div class="card">
+        <h3><i class="ti ti-utensils"></i> Plano Alimentar</h3>
+        <div class="field-group">
+          <label>Selecione seu objetivo</label>
+          <select id="objetivo-dieta">
+            <option value="">Selecione</option>
+            <option value="massa">Ganho de massa</option>
+            <option value="peso">Perda de peso</option>
+            <option value="tonificacao">Tonificação</option>
+            <option value="gordura">Queima de gordura</option>
+            <option value="performance">Alta performance</option>
+            <option value="manutencao">Manutenção</option>
+          </select>
+        </div>
+        <button class="btn-accent" onclick="gerarDieta()">Gerar Plano Alimentar</button>
+      </div>
     </div>
   </div>
   <nav class="nav">
@@ -1556,6 +1574,125 @@ async function gerarTreino(){
   } catch(e) {
     console.error('Erro ao gerar treino:', e);
     alert('Erro ao gerar treino');
+  }
+}
+
+// ══════════════════════════════════════════════
+// SISTEMA DE DIETAS POR OBJETIVO
+// ══════════════════════════════════════════════
+const DIETAS_POR_OBJETIVO = {
+  massa: {
+    nome: 'Dieta para Ganho de Massa',
+    descricao: 'Plano alimentar com superávit calórico para hipertrofia',
+    calorias: 3000,
+    refeicoes: [
+      {horario: '07:00', nome: 'Café da manhã', alimentos: ['3 ovos mexidos', '2 fatias de pão integral', '1 banana', '200ml de leite']},
+      {horario: '10:00', nome: 'Lanche da manhã', alimentos: ['1 iogurte grego', '30g de aveia', '1 colher de mel']},
+      {horario: '12:00', nome: 'Almoço', alimentos: ['200g de frango grelhado', '200g de arroz integral', '100g de feijão', 'salada verde']},
+      {horario: '15:00', nome: 'Lanche da tarde', alimentos: ['1 sanduíche de atum', '1 maçã']},
+      {horario: '19:00', nome: 'Jantar', alimentos: ['200g de carne vermelha', '200g de batata doce', 'legumes cozidos']},
+      {horario: '21:00', nome: 'Ceia', alimentos: ['1 iogurte', '30g de castanhas']}
+    ]
+  },
+  peso: {
+    nome: 'Dieta para Perda de Peso',
+    descricao: 'Plano alimentar com déficit calórico para queima de gordura',
+    calorias: 1800,
+    refeicoes: [
+      {horario: '07:00', nome: 'Café da manhã', alimentos: ['2 ovos cozidos', '1 fatia de pão integral', '1 fruta']},
+      {horario: '10:00', nome: 'Lanche da manhã', alimentos: ['1 iogurte natural', '10g de castanhas']},
+      {horario: '12:00', nome: 'Almoço', alimentos: ['150g de frango grelhado', '100g de arroz integral', 'salada verde']},
+      {horario: '15:00', nome: 'Lanche da tarde', alimentos: ['1 fruta', 'chá verde']},
+      {horario: '19:00', nome: 'Jantar', alimentos: ['150g de peixe grelhado', 'legumes cozidos']},
+      {horario: '21:00', nome: 'Ceia', alimentos: ['chá de camomila']}
+    ]
+  },
+  tonificacao: {
+    nome: 'Dieta para Tonificação',
+    descricao: 'Plano alimentar equilibrado para definição muscular',
+    calorias: 2200,
+    refeicoes: [
+      {horario: '07:00', nome: 'Café da manhã', alimentos: ['3 claras de ovo', '1 gema', '2 fatias de pão integral', '1 fruta']},
+      {horario: '10:00', nome: 'Lanche da manhã', alimentos: ['1 iogurte grego', '20g de aveia']},
+      {horario: '12:00', nome: 'Almoço', alimentos: ['180g de frango grelhado', '150g de arroz integral', 'salada verde']},
+      {horario: '15:00', nome: 'Lanche da tarde', alimentos: ['1 barra de proteína', '1 fruta']},
+      {horario: '19:00', nome: 'Jantar', alimentos: ['180g de peixe grelhado', 'legumes cozidos']},
+      {horario: '21:00', nome: 'Ceia', alimentos: ['1 iogurte light']}
+    ]
+  },
+  gordura: {
+    nome: 'Dieta para Queima de Gordura',
+    descricao: 'Plano alimentar com baixo carboidrato para queima de gordura',
+    calorias: 1600,
+    refeicoes: [
+      {horario: '07:00', nome: 'Café da manhã', alimentos: ['2 ovos cozidos', '1/2 abacate', 'chá verde']},
+      {horario: '10:00', nome: 'Lanche da manhã', alimentos: ['10g de castanhas']},
+      {horario: '12:00', nome: 'Almoço', alimentos: ['150g de frango grelhado', 'salada verde com azeite']},
+      {horario: '15:00', nome: 'Lanche da tarde', alimentos: ['1 fruta']},
+      {horario: '19:00', nome: 'Jantar', alimentos: ['150g de peixe grelhado', 'legumes']},
+      {horario: '21:00', nome: 'Ceia', alimentos: ['chá de hibisco']}
+    ]
+  },
+  performance: {
+    nome: 'Dieta para Alta Performance',
+    descricao: 'Plano alimentar com alto carboidrato para atletas',
+    calorias: 3500,
+    refeicoes: [
+      {horario: '06:00', nome: 'Pré-treino', alimentos: ['1 banana', '2 fatias de pão integral', 'mel']},
+      {horario: '09:00', nome: 'Café da manhã', alimentos: ['4 ovos mexidos', '200g de aveia', 'frutas']},
+      {horario: '12:00', nome: 'Almoço', alimentos: ['250g de frango grelhado', '300g de arroz integral', 'feijão']},
+      {horario: '15:00', nome: 'Lanche', alimentos: ['1 iogurte grego', 'banana', 'mel']},
+      {horario: '18:00', nome: 'Pré-treino', alimentos: ['1 banana', 'pasta de amendoim']},
+      {horario: '20:00', nome: 'Pós-treino', alimentos: ['200g de frango', '200g de batata doce']},
+      {horario: '22:00', nome: 'Ceia', alimentos: ['1 iogurte', 'castanhas']}
+    ]
+  },
+  manutencao: {
+    nome: 'Dieta para Manutenção',
+    descricao: 'Plano alimentar equilibrado para manter peso',
+    calorias: 2500,
+    refeicoes: [
+      {horario: '07:00', nome: 'Café da manhã', alimentos: ['2 ovos mexidos', '2 fatias de pão integral', '1 fruta']},
+      {horario: '10:00', nome: 'Lanche da manhã', alimentos: ['1 iogurte', '10g de castanhas']},
+      {horario: '12:00', nome: 'Almoço', alimentos: ['180g de frango grelhado', '150g de arroz integral', 'salada verde']},
+      {horario: '15:00', nome: 'Lanche da tarde', alimentos: ['1 fruta', 'chá verde']},
+      {horario: '19:00', nome: 'Jantar', alimentos: ['180g de peixe grelhado', 'legumes cozidos']},
+      {horario: '21:00', nome: 'Ceia', alimentos: ['1 iogurte']}
+    ]
+  }
+};
+
+async function gerarDieta(){
+  const objetivo = document.getElementById('objetivo-dieta').value;
+  if(!objetivo){
+    alert('Selecione um objetivo para a dieta');
+    return;
+  }
+
+  const dieta = DIETAS_POR_OBJETIVO[objetivo];
+  if(!dieta){
+    alert('Objetivo inválido');
+    return;
+  }
+
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const dietaData = {
+      objetivo,
+      nome: dieta.nome,
+      descricao: dieta.descricao,
+      calorias: dieta.calorias,
+      refeicoes: dieta.refeicoes,
+      createdAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_dietas/' + session.tokenKey).set(dietaData);
+    alert('Plano alimentar gerado com sucesso!');
+  } catch(e) {
+    console.error('Erro ao gerar dieta:', e);
+    alert('Erro ao gerar dieta');
   }
 }
 function addMsg(txt,who){
