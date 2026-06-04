@@ -186,17 +186,23 @@ select option{background:var(--bg2)}
   <div class="access-logo">Gym<span>AI</span></div>
   <div class="access-sub">Seu personal trainer com inteligência artificial</div>
   <div class="access-card">
-    <h2 id="access-title">Solicitar acesso</h2>
-    <div class="field">
-      <label>Seu nome</label>
-      <input type="text" id="field-nome" placeholder="Como quer ser chamado?">
+    <h2 id="access-title">Acessar aplicativo</h2>
+    <div id="access-step-1">
+      <div class="field">
+        <label>Celular (com DDD)</label>
+        <input type="tel" id="field-celular" placeholder="Ex: 11999999999">
+      </div>
+      <button class="btn-accent" onclick="checkExistingUser()">Verificar acesso</button>
+      <div class="access-error" id="access-error"></div>
     </div>
-    <div class="field">
-      <label>Celular (com DDD)</label>
-      <input type="tel" id="field-celular" placeholder="Ex: 11999999999">
+    <div id="access-step-2" style="display:none">
+      <div class="field">
+        <label>Seu nome</label>
+        <input type="text" id="field-nome" placeholder="Como quer ser chamado?">
+      </div>
+      <button class="btn-accent" onclick="requestAccess()">Solicitar cadastro</button>
+      <button class="btn-main" onclick="backToStep1()" style="margin-top:10px">Voltar</button>
     </div>
-    <button class="btn-accent" onclick="requestAccess()">Solicitar cadastro</button>
-    <div class="access-error" id="access-error"></div>
     <div class="token-hint" id="token-info"></div>
   </div>
 </div>
@@ -631,6 +637,62 @@ async function checkApproval(celular, nome){
       document.getElementById('token-info').innerHTML = 'Token expirado ou inválido. Solicite novo acesso.';
     }
   }
+}
+
+async function autoLogin(celular){
+  const requests = await getRequests();
+  const existing = Object.values(requests).find(r => r.celular === celular);
+
+  if(!existing || existing.status !== 'approved' || !existing.tokenKey){
+    return false;
+  }
+
+  const check = await validateToken(existing.tokenKey);
+  if(check.ok){
+    const session = {nome: existing.nome, tokenKey:existing.tokenKey, createdAt:Date.now()};
+    saveSession(session);
+    document.getElementById('access-screen').classList.remove('show');
+    bootApp(session);
+    await recordLogin(existing.tokenKey, existing.nome);
+    return true;
+  }
+
+  return false;
+}
+
+async function checkExistingUser(){
+  const celular = document.getElementById('field-celular').value.trim();
+  const errEl = document.getElementById('access-error');
+  errEl.classList.remove('show');
+
+  if(!celular || celular.length < 10){
+    errEl.textContent='Digite um celular válido (com DDD).';
+    errEl.classList.add('show');
+    return;
+  }
+
+  // Verificar se já existe cadastro aprovado
+  const requests = await getRequests();
+  const existing = Object.values(requests).find(r => r.celular === celular);
+
+  if(existing && existing.status === 'approved' && existing.tokenKey){
+    // Tentar login automático
+    const loggedIn = await autoLogin(celular);
+    if(loggedIn){
+      return;
+    }
+  }
+
+  // Se não existe ou não está aprovado, mostrar formulário de cadastro
+  document.getElementById('access-step-1').style.display = 'none';
+  document.getElementById('access-step-2').style.display = 'block';
+  document.getElementById('field-nome').value = existing ? existing.nome : '';
+}
+
+function backToStep1(){
+  document.getElementById('access-step-1').style.display = 'block';
+  document.getElementById('access-step-2').style.display = 'none';
+  document.getElementById('access-error').classList.remove('show');
 }
 
 async function recordLogin(tokenKey, nome){
