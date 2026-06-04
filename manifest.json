@@ -1,0 +1,22 @@
+{
+  "name": "Gym AI — Personal Trainer",
+  "short_name": "Gym AI",
+  "description": "App de treino com inteligência artificial",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192/c8f04a/0a0a0f?text=G",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512/c8f04a/0a0a0f?text=G",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Gym AI</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gym AI">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#0a0a0f;
+  --bg2:#111118;
+  --bg3:#1a1a24;
+  --card:#16161f;
+  --border:rgba(255,255,255,0.07);
+  --accent:#c8f04a;
+  --accent2:#7c6af7;
+  --text:#f0f0f8;
+  --muted:#6b6b80;
+  --danger:#ff4d6d;
+  --success:#4ade80;
+  --font-head:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --r:14px;
+  --r-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);overscroll-behavior:none}
+
+/* ── TELA DE ACESSO ── */
+#access-screen{
+  display:none;position:fixed;inset:0;background:var(--bg);
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:2rem;z-index:999;
+}
+#access-screen.show{display:flex}
+.access-logo{font-family:var(--font-head);font-size:2.5rem;font-weight:800;letter-spacing:-1px;margin-bottom:0.25rem}
+.access-logo span{color:var(--accent)}
+.access-sub{font-size:13px;color:var(--muted);margin-bottom:2.5rem}
+.access-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.75rem}
+.access-card h2{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:1.25rem}
+.field{margin-bottom:1rem}
+.field label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.field input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:15px;color:var(--text);font-family:var(--font-body);outline:none;transition:border-color 0.2s}
+.field input:focus{border-color:var(--accent2)}
+.btn-accent{width:100%;padding:13px;background:var(--accent);color:#0a0a0f;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:var(--font-head);cursor:pointer;letter-spacing:0.03em;transition:opacity 0.15s;margin-top:0.5rem}
+.btn-accent:hover{opacity:0.88}
+.btn-accent:disabled{opacity:0.4;cursor:default}
+.access-error{font-size:13px;color:var(--danger);margin-top:0.75rem;text-align:center;display:none}
+.access-error.show{display:block}
+.token-hint{font-size:12px;color:var(--muted);margin-top:1rem;text-align:center;line-height:1.5}
+.token-hint strong{color:var(--accent2)}
+
+/* ── APP ── */
+#app{display:none;flex-direction:column;height:100vh;max-width:430px;margin:0 auto}
+#app.show{display:flex}
+.topbar{padding:0.85rem 1.25rem 0.5rem;flex-shrink:0}
+.topbar-row{display:flex;align-items:center;justify-content:space-between}
+.app-logo{font-family:var(--font-head);font-size:1.3rem;font-weight:800;letter-spacing:-0.5px}
+.app-logo span{color:var(--accent)}
+.user-chip{font-size:12px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:5px}
+.user-chip i{font-size:14px;color:var(--accent)}
+.nav{display:flex;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0)}
+.nav-btn{flex:1;padding:10px 4px 8px;background:none;border:none;color:var(--muted);font-size:10px;font-family:var(--font-body);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color 0.15s}
+.nav-btn i{font-size:22px}
+.nav-btn.active{color:var(--accent)}
+.pages{flex:1;overflow-y:auto;overflow-x:hidden}
+.page{display:none;padding:0.75rem 1.25rem 1.5rem;animation:fadeIn 0.2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── COMPONENTES ── */
+.section-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;margin-top:1.25rem}
+.section-label:first-child{margin-top:0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:0.65rem}
+.card-title{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)}
+.card-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.card-clickable{cursor:pointer;transition:border-color 0.15s,background 0.15s}
+.card-clickable:hover{border-color:rgba(255,255,255,0.15);background:var(--bg3)}
+.badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:20px;margin:4px 3px 0 0;font-weight:500}
+.badge-lime{background:rgba(200,240,74,0.15);color:var(--accent)}
+.badge-purple{background:rgba(124,106,247,0.15);color:#a99df5}
+.badge-red{background:rgba(255,77,109,0.1);color:#ff7a90}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:0.65rem}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:0.85rem 1rem}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.stat-val{font-size:1.6rem;font-family:var(--font-head);font-weight:800;margin-top:2px}
+.stat-val small{font-size:13px;font-weight:400;color:var(--muted)}
+.dia-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:0.65rem}
+.dia{height:34px;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:500;gap:1px}
+.dia-label{color:var(--muted)}
+.dia-ok{background:rgba(200,240,74,0.15);color:var(--accent)}
+.dia-ok .dia-label{color:rgba(200,240,74,0.6)}
+.dia-hoje{background:var(--accent);color:#0a0a0f}
+.dia-hoje .dia-label{color:rgba(0,0,0,0.6)}
+.dia-vazio{background:var(--bg3)}
+.prog-bg{background:var(--bg3);border-radius:20px;height:6px;margin-top:6px}
+.prog-fill{height:6px;border-radius:20px;background:var(--accent);transition:width 0.4s}
+input,select{width:100%;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;color:var(--text);font-family:var(--font-body);outline:none;transition:border-color 0.2s}
+input:focus,select:focus{border-color:var(--accent2)}
+select option{background:var(--bg2)}
+.btn-main{width:100%;padding:13px;background:var(--accent);color:#0a0a0f;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:var(--font-head);cursor:pointer;margin-top:0.75rem;transition:opacity 0.15s}
+.btn-main:hover{opacity:0.88}
+.btn-ghost{width:100%;padding:11px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;cursor:pointer;font-family:var(--font-body);margin-top:0.5rem;transition:background 0.15s}
+.btn-ghost:hover{background:var(--bg3)}
+.log-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.log-row:last-child{border-bottom:none}
+.log-nome{flex:1;font-size:14px}
+.log-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.log-carga{font-size:14px;font-weight:700;font-family:var(--font-head);color:var(--accent)}
+.ex-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.ex-row:last-child{border-bottom:none}
+.ex-nome{flex:1;font-size:14px}
+.ex-meta{font-size:12px;color:var(--muted)}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--muted)}
+.empty i{font-size:40px;display:block;margin-bottom:0.75rem;opacity:0.3}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-group{margin-bottom:0.75rem}
+.field-group label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.75rem}
+.chip{padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);cursor:pointer;background:var(--bg3);transition:all 0.15s}
+.chip:hover,.chip.selected{border-color:var(--accent);color:var(--accent);background:rgba(200,240,74,0.08)}
+
+/* ── CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 140px)}
+.chat-msgs{flex:1;overflow-y:auto;padding:0.5rem 0;display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 14px;border-radius:var(--r);font-size:14px;line-height:1.6;max-width:90%}
+.msg-ai{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
+.msg-user{background:var(--accent2);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg-typing{display:flex;gap:5px;align-items:center;padding:12px 16px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.chat-bottom{padding:0.75rem 0 0;flex-shrink:0}
+.chat-input-row{display:flex;gap:8px}
+.chat-input-row input{flex:1}
+.send-btn{width:44px;height:44px;background:var(--accent);border:none;border-radius:var(--r-sm);cursor:pointer;font-size:18px;color:#0a0a0f;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.send-btn:disabled{opacity:0.4;cursor:default}
+.quick-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.65rem}
+.quick-chip{padding:6px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);cursor:pointer;transition:all 0.15s}
+.quick-chip:hover{border-color:var(--accent2);color:#a99df5}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:50;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:430px;padding:1.5rem 1.25rem;max-height:85vh;overflow-y:auto;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom,0))}
+.modal-title{font-family:var(--font-head);font-size:1.1rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.modal-close{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--text)}
+
+/* ── GRÁFICO ── */
+#ev-chart-wrap{position:relative;height:160px;margin:0.5rem 0}
+
+/* ── VALIDADE CHIP ── */
+.validity-bar{height:4px;border-radius:2px;background:var(--bg3);margin-top:8px;overflow:hidden}
+.validity-fill{height:100%;border-radius:2px;transition:width 0.3s}
+</style>
+</head>
+<body>
+
+<!-- TELA DE ACESSO -->
+<div id="access-screen">
+  <div class="access-logo">Gym<span>AI</span></div>
+  <div class="access-sub">Seu personal trainer com inteligência artificial</div>
+  <div class="access-card">
+    <h2 id="access-title">Criar sua conta</h2>
+    <div class="field">
+      <label>Seu nome</label>
+      <input type="text" id="field-nome" placeholder="Como quer ser chamado?">
+    </div>
+    <div class="field" id="field-senha-wrap">
+      <label>Criar senha</label>
+      <input type="password" id="field-senha" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="field" id="field-confirm-wrap">
+      <label>Confirmar senha</label>
+      <input type="password" id="field-confirm" placeholder="Repita a senha">
+    </div>
+    <button class="btn-accent" onclick="handleAccess()">Entrar no Gym AI</button>
+    <div class="access-error" id="access-error"></div>
+    <div class="token-hint" id="token-info"></div>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="app-logo">Gym<span>AI</span></div>
+      <div class="user-chip"><i class="ti ti-user-circle"></i><span id="user-nome-chip">Usuário</span></div>
+    </div>
+  </div>
+  <div class="pages">
+    <!-- HOME -->
+    <div class="page active" id="pg-home">
+      <div class="dia-grid" id="dia-grid"></div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-label">Esta semana</div>
+          <div class="stat-val" id="s-semana">3 <small>/ 5</small></div>
+          <div class="prog-bg"><div class="prog-fill" id="s-prog" style="width:60%"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Sequência</div>
+          <div class="stat-val">4 <small>dias</small></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Séries hoje</div>
+          <div class="stat-val" id="s-series">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Volume</div>
+          <div class="stat-val" id="s-volume">0 <small>kg</small></div>
+        </div>
+      </div>
+      <div class="section-label">Próximo treino</div>
+      <div class="card card-clickable" onclick="openTreino('A')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ti ti-player-play" style="color:var(--accent);font-size:18px"></i>
+          <div>
+            <div class="card-title">Treino A — Peito & Tríceps</div>
+            <div class="card-sub">6 exercícios · ~50 min</div>
+          </div>
+        </div>
+        <span class="badge badge-lime">Peito</span>
+        <span class="badge badge-purple">Tríceps</span>
+        <span class="badge badge-lime">Ombro</span>
+      </div>
+      <div class="section-label">Validade do acesso</div>
+      <div class="card" id="validity-card"></div>
+    </div>
+
+    <!-- TREINOS -->
+    <div class="page" id="pg-treinos">
+      <div class="section-label">Fichas de treino</div>
+      <div id="treinos-list"></div>
+      <button class="btn-ghost" onclick="openNovoTreino()"><i class="ti ti-plus"></i> Nova ficha de treino</button>
+    </div>
+
+    <!-- LOG -->
+    <div class="page" id="pg-log">
+      <div class="section-label">Registrar série</div>
+      <div class="card">
+        <div class="field-group">
+          <label>Exercício</label>
+          <select id="log-ex">
+            <option>Supino reto</option><option>Supino inclinado</option><option>Crucifixo</option>
+            <option>Tríceps corda</option><option>Tríceps testa</option><option>Agachamento</option>
+            <option>Leg press</option><option>Cadeira extensora</option><option>Cadeira flexora</option>
+            <option>Rosca direta</option><option>Rosca martelo</option><option>Remada curvada</option>
+            <option>Puxada frontal</option><option>Stiff</option><option>Panturrilha</option>
+          </select>
+        </div>
+        <div class="input-row">
+          <div class="field-group"><label>Séries</label><input type="number" id="log-s" value="3" min="1"></div>
+          <div class="field-group"><label>Reps</label><input type="number" id="log-r" value="12" min="1"></div>
+          <div class="field-group"><label>Carga (kg)</label><input type="number" id="log-c" value="60" step="2.5"></div>
+          <div class="field-group"><label>Descanso (s)</label><input type="number" id="log-d" value="90" step="15"></div>
+        </div>
+        <button class="btn-main" onclick="registrar()"><i class="ti ti-check"></i> Registrar série</button>
+      </div>
+      <div class="section-label">Hoje</div>
+      <div class="card" id="log-hoje"><div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma série ainda</div></div>
+    </div>
+
+    <!-- EVOLUÇÃO -->
+    <div class="page" id="pg-ev">
+      <div class="section-label">Exercício</div>
+      <select id="ev-select" onchange="renderEv()" style="margin-bottom:0.75rem">
+        <option>Supino reto</option><option>Agachamento</option><option>Rosca direta</option><option>Remada curvada</option>
+      </select>
+      <div class="card">
+        <div id="ev-chart-wrap"><canvas id="ev-chart"></canvas></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-label">Recorde (1RM)</div><div class="stat-val" id="ev-rec">80 <small>kg</small></div></div>
+        <div class="stat"><div class="stat-label">Progresso 30d</div><div class="stat-val" id="ev-prog" style="color:var(--success)">+12 <small>%</small></div></div>
+      </div>
+      <div class="section-label">Histórico</div>
+      <div class="card" id="ev-hist"></div>
+    </div>
+
+    <!-- IA -->
+    <div class="page" id="pg-ia">
+      <div class="chat-wrap">
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="msg msg-ai">Olá! Sou seu personal trainer virtual 💪 Posso montar treinos, sugerir ajustes de carga e analisar sua evolução. Como posso ajudar?</div>
+        </div>
+        <div class="chat-bottom">
+          <div class="quick-chips">
+            <span class="quick-chip" onclick="qp(this)">Monte um treino ABC</span>
+            <span class="quick-chip" onclick="qp(this)">Como aumentar supino?</span>
+            <span class="quick-chip" onclick="qp(this)">Dica de recuperação</span>
+            <span class="quick-chip" onclick="qp(this)">Analisa meu volume</span>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-in" placeholder="Pergunte ao personal IA..." onkeydown="if(event.key==='Enter')sendIA()">
+            <button class="send-btn" id="send-btn" onclick="sendIA()" aria-label="Enviar"><i class="ti ti-send"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="goPage('home',0)"><i class="ti ti-home"></i>Início</button>
+    <button class="nav-btn" onclick="goPage('treinos',1)"><i class="ti ti-list"></i>Treinos</button>
+    <button class="nav-btn" onclick="goPage('log',2)"><i class="ti ti-plus-circle"></i>Log</button>
+    <button class="nav-btn" onclick="goPage('ev',3)"><i class="ti ti-chart-line"></i>Evolução</button>
+    <button class="nav-btn" onclick="goPage('ia',4)"><i class="ti ti-robot"></i>IA</button>
+  </nav>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ══════════════════════════════════════════════
+// CONTROLE DE ACESSO
+// ══════════════════════════════════════════════
+const ADMIN_KEY = 'gymai_admin_tokens'; // mesma chave usada pelo admin.html
+
+function getTokens(){
+  try{ return JSON.parse(localStorage.getItem(ADMIN_KEY)||'{}'); }catch(e){return{};}
+}
+
+function getUrlToken(){
+  const p = new URLSearchParams(location.search);
+  return p.get('t') || p.get('token') || null;
+}
+
+function getUserSession(){
+  try{ return JSON.parse(localStorage.getItem('gymai_session')||'null'); }catch(e){return null;}
+}
+
+function saveSession(data){
+  localStorage.setItem('gymai_session', JSON.stringify(data));
+}
+
+function validateToken(tk){
+  const tokens = getTokens();
+  if(!tokens[tk]) return {ok:false, msg:'Token não encontrado. Solicite um novo QR code ao administrador.'};
+  const t = tokens[tk];
+  const now = Date.now();
+  if(t.expiresAt && now > t.expiresAt) return {ok:false, msg:'Acesso expirado. Solicite renovação ao administrador.'};
+  if(t.maxUses && t.uses >= t.maxUses) return {ok:false, msg:'Limite de usos atingido. Solicite novo QR code.'};
+  return {ok:true, token:t, key:tk};
+}
+
+function consumeTokenUse(tk){
+  const tokens = getTokens();
+  if(tokens[tk]){
+    tokens[tk].uses = (tokens[tk].uses||0) + 1;
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(tokens));
+  }
+}
+
+// ── INICIALIZAÇÃO ──
+window.addEventListener('load', ()=>{
+  const urlToken = getUrlToken();
+  const session = getUserSession();
+
+  // já tem sessão válida
+  if(session){
+    const check = validateToken(session.tokenKey);
+    if(check.ok){
+      bootApp(session);
+      return;
+    }
+  }
+
+  // vem com token na URL
+  if(urlToken){
+    const check = validateToken(urlToken);
+    if(!check.ok){
+      showAccessScreen(urlToken, check.msg);
+      return;
+    }
+    // token válido: mostrar tela de criação de senha
+    showAccessScreen(urlToken, null, check.token);
+  } else {
+    // sem token e sem sessão: acesso negado
+    showAccessScreen(null, 'Você precisa de um QR code de acesso. Solicite ao administrador.');
+  }
+});
+
+function showAccessScreen(tk, errMsg, tokenData){
+  const scr = document.getElementById('access-screen');
+  scr.classList.add('show');
+
+  if(errMsg){
+    document.getElementById('access-title').textContent = 'Acesso negado';
+    document.getElementById('field-nome').closest('.field').style.display='none';
+    document.getElementById('field-senha-wrap').style.display='none';
+    document.getElementById('field-confirm-wrap').style.display='none';
+    document.querySelector('.btn-accent').style.display='none';
+    document.getElementById('access-error').textContent = errMsg;
+    document.getElementById('access-error').classList.add('show');
+    return;
+  }
+
+  if(tokenData){
+    document.getElementById('access-title').textContent = tokenData.nome
+      ? `Olá, ${tokenData.nome}! 👋` : 'Criar sua conta';
+    document.getElementById('field-nome').value = tokenData.nome || '';
+    const exp = tokenData.expiresAt ? new Date(tokenData.expiresAt).toLocaleDateString('pt-BR') : null;
+    const uses = tokenData.maxUses ? `${tokenData.uses||0}/${tokenData.maxUses} usos` : 'ilimitado';
+    document.getElementById('token-info').innerHTML =
+      `Token: <strong>${tk?.substring(0,8)}...</strong><br>
+       ${exp ? 'Válido até: <strong>'+exp+'</strong>' : ''} · Usos: <strong>${uses}</strong>`;
+  }
+
+  window._activeToken = tk;
+  window._activeTokenData = tokenData;
+}
+
+function handleAccess(){
+  const nome = document.getElementById('field-nome').value.trim();
+  const senha = document.getElementById('field-senha').value;
+  const confirm = document.getElementById('field-confirm').value;
+  const errEl = document.getElementById('access-error');
+  errEl.classList.remove('show');
+
+  if(!nome){errEl.textContent='Digite seu nome.';errEl.classList.add('show');return;}
+  if(senha.length < 6){errEl.textContent='Senha mínima de 6 caracteres.';errEl.classList.add('show');return;}
+  if(senha !== confirm){errEl.textContent='As senhas não coincidem.';errEl.classList.add('show');return;}
+
+  const tk = window._activeToken;
+  const check = validateToken(tk);
+  if(!check.ok){errEl.textContent=check.msg;errEl.classList.add('show');return;}
+
+  consumeTokenUse(tk);
+  const session = {nome, tokenKey:tk, createdAt:Date.now()};
+  saveSession(session);
+
+  // salva senha hasheada simplificada (não usar em produção com dados sensíveis)
+  localStorage.setItem('gymai_pwd_'+tk, btoa(senha));
+
+  document.getElementById('access-screen').classList.remove('show');
+  bootApp(session);
+}
+
+function bootApp(session){
+  document.getElementById('user-nome-chip').textContent = session.nome;
+  document.getElementById('app').classList.add('show');
+  renderDias();
+  renderTreinos();
+  renderLog();
+  renderValidityCard(session.tokenKey);
+}
+
+// ══════════════════════════════════════════════
+// VALIDADE
+// ══════════════════════════════════════════════
+function renderValidityCard(tk){
+  const tokens = getTokens();
+  const t = tokens[tk];
+  if(!t){ document.getElementById('validity-card').innerHTML='<div style="color:var(--muted);font-size:13px">Informações de acesso indisponíveis</div>'; return; }
+  const now = Date.now();
+  const exp = t.expiresAt;
+  const uses = t.uses || 0;
+  const maxU = t.maxUses;
+  let html = '';
+  if(exp){
+    const dias = Math.max(0, Math.ceil((exp-now)/86400000));
+    const total = Math.ceil((exp - (t.createdAt||now))/86400000) || 30;
+    const pct = Math.min(100, Math.round(dias/total*100));
+    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:var(--muted)">Validade</span><span style="font-size:13px;font-weight:600;color:${dias<5?'var(--danger)':'var(--success)'}">${dias} dias restantes</span></div>
+    <div class="validity-bar"><div class="validity-fill" style="width:${pct}%;background:${dias<5?'var(--danger)':'var(--accent)'}"></div></div>`;
+  }
+  if(maxU){
+    const pctU = Math.min(100, Math.round(uses/maxU*100));
+    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;margin-top:10px"><span style="font-size:13px;color:var(--muted)">Usos</span><span style="font-size:13px;font-weight:600">${uses} / ${maxU}</span></div>
+    <div class="validity-bar"><div class="validity-fill" style="width:${pctU}%;background:var(--accent2)"></div></div>`;
+  }
+  if(!exp && !maxU) html = '<div style="font-size:13px;color:var(--success)">✓ Acesso ilimitado</div>';
+  document.getElementById('validity-card').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// NAVEGAÇÃO
+// ══════════════════════════════════════════════
+const navBtns = document.querySelectorAll('.nav-btn');
+function goPage(pg, idx){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+pg).classList.add('active');
+  navBtns.forEach((b,i)=>b.classList.toggle('active',i===idx));
+  if(pg==='ev') renderEv();
+}
+
+// ══════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════
+const DIAS_LABEL = ['D','S','T','Q','Q','S','S'];
+const DIAS_FEITOS = [1,2,4,5];
+function renderDias(){
+  const hoje = new Date().getDay();
+  document.getElementById('dia-grid').innerHTML = DIAS_LABEL.map((d,i)=>{
+    if(i===hoje) return `<div class="dia dia-hoje"><span>${d}</span><span class="dia-label">Hj</span></div>`;
+    if(DIAS_FEITOS.includes(i)) return `<div class="dia dia-ok"><span>✓</span><span class="dia-label">${d}</span></div>`;
+    return `<div class="dia dia-vazio"><span class="dia-label">${d}</span></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// TREINOS
+// ══════════════════════════════════════════════
+const FICHAS = [
+  {id:'A',nome:'Treino A',foco:'Peito & Tríceps',ex:['Supino reto','Supino inclinado','Crucifixo','Tríceps corda','Tríceps testa','Supino fechado'],grupos:['Peito','Tríceps','Ombro'],min:50},
+  {id:'B',nome:'Treino B',foco:'Costas & Bíceps',ex:['Puxada frontal','Remada curvada','Remada unilateral','Rosca direta','Rosca martelo','Face pull'],grupos:['Costas','Bíceps','Posterior'],min:55},
+  {id:'C',nome:'Treino C',foco:'Pernas',ex:['Agachamento','Leg press','Cadeira extensora','Cadeira flexora','Panturrilha','Stiff'],grupos:['Quadríceps','Posterior','Glúteo'],min:60},
+];
+function renderTreinos(){
+  document.getElementById('treinos-list').innerHTML = FICHAS.map(f=>`
+    <div class="card card-clickable" onclick="openTreino('${f.id}')">
+      <div class="card-title">${f.nome} — ${f.foco}</div>
+      <div class="card-sub">${f.ex.length} exercícios · ~${f.min} min</div>
+      ${f.grupos.map(g=>`<span class="badge badge-lime">${g}</span>`).join('')}
+    </div>`).join('');
+}
+function openTreino(id){
+  const f = FICHAS.find(x=>x.id===id);
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">${f.nome} — ${f.foco}<button class="modal-close" onclick="closeModal()">×</button></div>
+    ${f.ex.map(e=>`<div class="ex-row"><span class="ex-nome">${e}</span><span class="ex-meta">4 × 12</span></div>`).join('')}
+    <button class="btn-main" onclick="closeModal();goPage('log',2)"><i class="ti ti-player-play"></i> Iniciar este treino</button>
+    <button class="btn-ghost" onclick="closeModal()">Fechar</button>`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function openNovoTreino(){
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-title">Nova ficha<button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="field-group"><label>Nome da ficha</label><input type="text" placeholder="Ex: Treino D — Ombro"></div>
+    <div class="field-group"><label>Grupos musculares</label><input type="text" placeholder="Ex: Ombro, Trapézio"></div>
+    <button class="btn-main" onclick="closeModal()">Salvar ficha</button>
+    <button class="btn-ghost" onclick="closeModal()">Cancelar</button>`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }
+
+// ══════════════════════════════════════════════
+// LOG
+// ══════════════════════════════════════════════
+let logData = [];
+function registrar(){
+  logData.push({
+    ex: document.getElementById('log-ex').value,
+    s: +document.getElementById('log-s').value,
+    r: +document.getElementById('log-r').value,
+    c: +document.getElementById('log-c').value,
+    hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+  });
+  renderLog();
+  updateStats();
+}
+function renderLog(){
+  const el = document.getElementById('log-hoje');
+  if(!logData.length){ el.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma série ainda</div>'; return; }
+  el.innerHTML = logData.map(l=>`
+    <div class="log-row">
+      <div><div class="log-nome">${l.ex}</div><div class="log-sub">${l.hora} · ${l.s}×${l.r} reps</div></div>
+      <div class="log-carga">${l.c}kg</div>
+    </div>`).join('');
+}
+function updateStats(){
+  document.getElementById('s-series').textContent = logData.reduce((a,l)=>a+l.s,0);
+  const vol = logData.reduce((a,l)=>a+(l.c*l.s*l.r),0);
+  document.getElementById('s-volume').innerHTML = Math.round(vol)+' <small>kg</small>';
+}
+
+// ══════════════════════════════════════════════
+// EVOLUÇÃO
+// ══════════════════════════════════════════════
+const EV_DATA = {
+  'Supino reto':[{d:'28/05',c:75},{d:'02/06',c:77.5},{d:'03/06',c:80}],
+  'Agachamento':[{d:'28/05',c:100},{d:'01/06',c:105},{d:'03/06',c:110}],
+  'Rosca direta':[{d:'29/05',c:30},{d:'02/06',c:32.5},{d:'03/06',c:32.5}],
+  'Remada curvada':[{d:'30/05',c:70},{d:'02/06',c:72.5},{d:'03/06',c:75}],
+};
+let evChart = null;
+function renderEv(){
+  const ex = document.getElementById('ev-select').value;
+  const dados = EV_DATA[ex]||[];
+  if(evChart) evChart.destroy();
+  evChart = new Chart(document.getElementById('ev-chart'),{
+    type:'line',
+    data:{
+      labels:dados.map(d=>d.d),
+      datasets:[{label:'kg',data:dados.map(d=>d.c),borderColor:'#c8f04a',backgroundColor:'rgba(200,240,74,0.08)',tension:0.3,pointBackgroundColor:'#c8f04a',fill:true,pointRadius:5}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#6b6b80',font:{size:11}}},
+              x:{grid:{display:false},ticks:{color:'#6b6b80',font:{size:11}}}}}
+  });
+  const cs = dados.map(d=>d.c);
+  const prog = cs.length>1 ? Math.round((cs[cs.length-1]-cs[0])/cs[0]*100) : 0;
+  document.getElementById('ev-rec').innerHTML = Math.max(...cs)+' <small>kg</small>';
+  document.getElementById('ev-prog').innerHTML = (prog>=0?'+':'')+prog+' <small>%</small>';
+  document.getElementById('ev-hist').innerHTML = [...dados].reverse().map(d=>`
+    <div class="log-row"><div class="log-nome">${d.d}</div><div class="log-carga">${d.c} kg</div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// IA CHAT
+// ══════════════════════════════════════════════
+function qp(el){ document.getElementById('chat-in').value=el.textContent; sendIA(); }
+async function sendIA(){
+  const inp = document.getElementById('chat-in');
+  const btn = document.getElementById('send-btn');
+  const msg = inp.value.trim();
+  if(!msg) return;
+  addMsg(msg,'user'); inp.value=''; btn.disabled=true;
+  const typing = document.createElement('div');
+  typing.className='msg msg-ai msg-typing';
+  typing.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  document.getElementById('chat-msgs').appendChild(typing);
+  scrollChat();
+  const ctx = `Usuário: ${document.getElementById('user-nome-chip').textContent}. Séries hoje: ${logData.length}. Volume: ${Math.round(logData.reduce((a,l)=>a+(l.c*l.s*l.r),0))}kg.`;
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
+        system:`Você é personal trainer virtual expert em musculação e hipertrofia. Responda em português brasileiro de forma objetiva e motivacional. Máximo 3 parágrafos. ${ctx}`,
+        messages:[{role:'user',content:msg}]})
+    });
+    const data = await res.json();
+    typing.remove();
+    addMsg(data.content?.[0]?.text||'Não consegui resposta. Tente novamente.','ai');
+  }catch(e){
+    typing.remove();
+    addMsg('Erro de conexão. Verifique a internet e tente novamente.','ai');
+  }
+  btn.disabled=false; scrollChat();
+}
+function addMsg(txt,who){
+  const d=document.createElement('div');
+  d.className='msg msg-'+who; d.textContent=txt;
+  document.getElementById('chat-msgs').appendChild(d);
+  return d;
+}
+function scrollChat(){ const c=document.getElementById('chat-msgs'); c.scrollTop=c.scrollHeight; }
+</script>
+</body>
+</html>

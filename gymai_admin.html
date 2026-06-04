@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gym AI — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#0a0a0f;--bg2:#111118;--bg3:#1a1a24;--card:#16161f;
+  --border:rgba(255,255,255,0.07);--accent:#c8f04a;--accent2:#7c6af7;
+  --text:#f0f0f8;--muted:#6b6b80;--danger:#ff4d6d;--success:#4ade80;--warn:#fbbf24;
+  --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--r:14px;--r-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+#login-screen.hide{display:none}
+.login-logo{font-family:var(--font-head);font-size:2rem;font-weight:800;margin-bottom:0.25rem}
+.login-logo span{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:2rem}
+.login-card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.75rem}
+.login-card h2{font-family:var(--font-head);font-size:1rem;font-weight:700;margin-bottom:1.25rem;color:var(--muted)}
+.field{margin-bottom:1rem}
+.field label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.field input{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:15px;color:var(--text);outline:none;font-family:var(--font-body);transition:border-color 0.2s}
+.field input:focus{border-color:var(--accent)}
+.btn-accent{width:100%;padding:13px;background:var(--accent);color:#0a0a0f;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:var(--font-head);cursor:pointer;transition:opacity 0.15s}
+.btn-accent:hover{opacity:0.88}
+.login-err{font-size:13px;color:var(--danger);margin-top:0.75rem;text-align:center;display:none}
+.login-err.show{display:block}
+
+/* APP ADMIN */
+#admin-app{display:none}
+#admin-app.show{display:block}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.admin-logo{font-family:var(--font-head);font-size:1.3rem;font-weight:800}
+.admin-logo span{color:var(--accent)}
+.admin-badge{font-size:11px;background:rgba(200,240,74,0.15);color:var(--accent);padding:3px 10px;border-radius:20px;font-weight:600}
+.logout-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:var(--r-sm);font-size:13px;cursor:pointer;font-family:var(--font-body);transition:all 0.15s}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.main{max-width:960px;margin:0 auto;padding:2rem}
+.grid-2{display:grid;grid-template-columns:1fr 1.5fr;gap:1.5rem;align-items:start}
+@media(max-width:700px){.grid-2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem}
+.card h2{font-family:var(--font-head);font-size:1rem;font-weight:700;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.card h2 i{color:var(--accent);font-size:18px}
+.field-group{margin-bottom:1rem}
+.field-group label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+.field-group input,.field-group select{width:100%;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;color:var(--text);outline:none;font-family:var(--font-body);transition:border-color 0.2s}
+.field-group input:focus,.field-group select:focus{border-color:var(--accent)}
+.field-group select option{background:var(--bg2)}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-main{width:100%;padding:12px;background:var(--accent);color:#0a0a0f;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:var(--font-head);cursor:pointer;margin-top:0.5rem;transition:opacity 0.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-main:hover{opacity:0.88}
+.btn-ghost{width:100%;padding:10px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;cursor:pointer;font-family:var(--font-body);margin-top:0.5rem;transition:background 0.15s}
+.btn-ghost:hover{background:var(--bg3)}
+.token-list{display:flex;flex-direction:column;gap:10px}
+.token-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:1rem 1.1rem}
+.token-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.token-nome{font-weight:500;font-size:14px}
+.token-key{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px}
+.status-pill{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px}
+.pill-ok{background:rgba(74,222,128,0.15);color:var(--success)}
+.pill-exp{background:rgba(255,77,109,0.1);color:var(--danger)}
+.pill-used{background:rgba(251,191,36,0.1);color:var(--warn)}
+.token-meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.token-actions{display:flex;gap:6px;margin-top:10px}
+.act-btn{padding:6px 12px;font-size:12px;border-radius:var(--r-sm);border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all 0.15s;display:flex;align-items:center;gap:4px}
+.act-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.act-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.empty{text-align:center;padding:2rem;color:var(--muted)}
+.empty i{font-size:36px;display:block;margin-bottom:0.5rem;opacity:0.3}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:0.85rem 1rem}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.stat-val{font-size:1.5rem;font-family:var(--font-head);font-weight:800;margin-top:2px}
+
+/* QR MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:2rem;width:100%;max-width:420px;text-align:center}
+.modal h2{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:0.5rem}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:1.25rem}
+#qr-container{background:#fff;border-radius:var(--r-sm);padding:16px;display:inline-block;margin-bottom:1rem}
+.token-url{font-size:11px;color:var(--muted);word-break:break-all;background:var(--bg3);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:1rem;text-align:left;font-family:monospace}
+.modal-close-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:9px 20px;border-radius:var(--r-sm);font-size:13px;cursor:pointer;font-family:var(--font-body)}
+.modal-close-btn:hover{border-color:var(--text);color:var(--text)}
+.copy-btn{background:var(--accent);border:none;color:#0a0a0f;padding:9px 20px;border-radius:var(--r-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-head);margin-right:6px}
+.copy-btn:hover{opacity:0.88}
+</style>
+</head>
+<body>
+
+<!-- LOGIN ADMIN -->
+<div id="login-screen">
+  <div class="login-logo">Gym<span>AI</span></div>
+  <div class="login-sub">Painel de administração</div>
+  <div class="login-card">
+    <h2>🔐 Acesso restrito</h2>
+    <div class="field">
+      <label>Senha de admin</label>
+      <input type="password" id="admin-pwd" placeholder="Sua senha de administrador" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-accent" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err">Senha incorreta.</div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="admin-app">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="admin-logo">Gym<span>AI</span></div>
+      <div class="admin-badge">Admin</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:13px;color:var(--muted)" id="admin-id-display"></span>
+      <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="stats-row" id="admin-stats"></div>
+    <div class="grid-2">
+      <!-- GERADOR -->
+      <div>
+        <div class="card">
+          <h2><i class="ti ti-qrcode"></i> Gerar novo acesso</h2>
+          <div class="field-group">
+            <label>Nome do usuário</label>
+            <input type="text" id="g-nome" placeholder="Ex: João Silva">
+          </div>
+          <div class="row-2">
+            <div class="field-group">
+              <label>Validade (dias)</label>
+              <select id="g-dias">
+                <option value="0">Sem limite</option>
+                <option value="7">7 dias</option>
+                <option value="15">15 dias</option>
+                <option value="30" selected>30 dias</option>
+                <option value="60">60 dias</option>
+                <option value="90">90 dias</option>
+                <option value="365">1 ano</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Limite de usos</label>
+              <select id="g-usos">
+                <option value="0">Ilimitado</option>
+                <option value="1">1 uso</option>
+                <option value="3">3 usos</option>
+                <option value="5">5 usos</option>
+                <option value="10">10 usos</option>
+                <option value="50">50 usos</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label>URL base do app</label>
+            <input type="text" id="g-url" placeholder="https://seusite.github.io/gymai/">
+          </div>
+          <button class="btn-main" onclick="gerarToken()"><i class="ti ti-qrcode"></i> Gerar QR Code</button>
+        </div>
+      </div>
+
+      <!-- LISTA -->
+      <div>
+        <div class="card">
+          <h2><i class="ti ti-users"></i> Acessos gerados</h2>
+          <div class="token-list" id="token-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QR -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeQR()">
+  <div class="modal">
+    <h2 id="qr-title">QR Code de acesso</h2>
+    <div class="modal-sub" id="qr-sub"></div>
+    <div id="qr-container"></div>
+    <div class="token-url" id="qr-url"></div>
+    <div>
+      <button class="copy-btn" onclick="copyUrl()"><i class="ti ti-copy"></i> Copiar link</button>
+      <button class="modal-close-btn" onclick="closeQR()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+// ══════════════════════════════════════════════
+// CONFIG — ALTERE AQUI
+// ══════════════════════════════════════════════
+const ADMIN_PASSWORD = 'gymai@2024'; // TROQUE PARA SUA SENHA
+const ADMIN_STORE_KEY = 'gymai_admin_tokens';
+const DEFAULT_URL = location.origin + location.pathname.replace('admin.html','');
+
+// ══════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════
+function doLogin(){
+  const pwd = document.getElementById('admin-pwd').value;
+  const errEl = document.getElementById('login-err');
+  if(pwd === ADMIN_PASSWORD){
+    document.getElementById('login-screen').classList.add('hide');
+    document.getElementById('admin-app').classList.add('show');
+    document.getElementById('g-url').value = DEFAULT_URL;
+    document.getElementById('admin-id-display').textContent = 'helton@gymai';
+    renderAdmin();
+  } else {
+    errEl.classList.add('show');
+    setTimeout(()=>errEl.classList.remove('show'),3000);
+  }
+}
+function doLogout(){
+  document.getElementById('login-screen').classList.remove('hide');
+  document.getElementById('admin-app').classList.remove('show');
+  document.getElementById('admin-pwd').value='';
+}
+document.getElementById('admin-pwd').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// ══════════════════════════════════════════════
+// TOKENS
+// ══════════════════════════════════════════════
+function getTokens(){ try{return JSON.parse(localStorage.getItem(ADMIN_STORE_KEY)||'{}')}catch(e){return{}} }
+function saveTokens(t){ localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(t)); }
+
+function gerarId(){
+  return 'tk_'+Math.random().toString(36).substring(2,10)+Date.now().toString(36);
+}
+
+function gerarToken(){
+  const nome = document.getElementById('g-nome').value.trim();
+  const dias = parseInt(document.getElementById('g-dias').value)||0;
+  const usos = parseInt(document.getElementById('g-usos').value)||0;
+  const baseUrl = document.getElementById('g-url').value.trim() || DEFAULT_URL;
+
+  if(!nome){ alert('Digite o nome do usuário.'); return; }
+
+  const id = gerarId();
+  const now = Date.now();
+  const token = {
+    nome,
+    createdAt: now,
+    expiresAt: dias ? now + dias*86400000 : null,
+    maxUses: usos || null,
+    uses: 0,
+  };
+
+  const tokens = getTokens();
+  tokens[id] = token;
+  saveTokens(tokens);
+
+  const url = baseUrl.endsWith('/') ? baseUrl+'?t='+id : baseUrl+'?t='+id;
+  mostrarQR(id, token, url);
+  renderAdmin();
+  document.getElementById('g-nome').value='';
+}
+
+let currentQRUrl = '';
+function mostrarQR(id, token, url){
+  currentQRUrl = url;
+  const dias = token.expiresAt ? Math.ceil((token.expiresAt-Date.now())/86400000)+' dias' : 'sem limite';
+  const usos = token.maxUses ? token.maxUses+' usos máx.' : 'usos ilimitados';
+  document.getElementById('qr-title').textContent = 'QR Code — '+token.nome;
+  document.getElementById('qr-sub').textContent = `Validade: ${dias} · ${usos}`;
+  document.getElementById('qr-url').textContent = url;
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '';
+  const canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  QRCode.toCanvas(canvas, url, {width:220, margin:1, color:{dark:'#0a0a0f',light:'#ffffff'}});
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeQR(){ document.getElementById('modal-bg').classList.remove('open'); }
+function copyUrl(){
+  navigator.clipboard.writeText(currentQRUrl).then(()=>{
+    const btn = document.querySelector('.copy-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML='<i class="ti ti-check"></i> Copiado!';
+    setTimeout(()=>btn.innerHTML=orig, 2000);
+  });
+}
+
+// ══════════════════════════════════════════════
+// RENDER LISTA
+// ══════════════════════════════════════════════
+function renderAdmin(){
+  const tokens = getTokens();
+  const list = document.getElementById('token-list');
+  const entries = Object.entries(tokens);
+  const now = Date.now();
+
+  // stats
+  const total = entries.length;
+  const ativos = entries.filter(([,t])=>!(t.expiresAt&&now>t.expiresAt)&&!(t.maxUses&&t.uses>=t.maxUses)).length;
+  const exp = total - ativos;
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat"><div class="stat-label">Total gerados</div><div class="stat-val">${total}</div></div>
+    <div class="stat"><div class="stat-label">Ativos</div><div class="stat-val" style="color:var(--success)">${ativos}</div></div>
+    <div class="stat"><div class="stat-label">Expirados</div><div class="stat-val" style="color:var(--danger)">${exp}</div></div>`;
+
+  if(!entries.length){
+    list.innerHTML='<div class="empty"><i class="ti ti-users"></i>Nenhum acesso gerado ainda</div>';
+    return;
+  }
+
+  list.innerHTML = entries.reverse().map(([id,t])=>{
+    const expired = t.expiresAt && now > t.expiresAt;
+    const usedUp = t.maxUses && t.uses >= t.maxUses;
+    const active = !expired && !usedUp;
+    const statusClass = expired||usedUp ? (usedUp?'pill-used':'pill-exp') : 'pill-ok';
+    const statusTxt = expired ? 'Expirado' : usedUp ? 'Esgotado' : 'Ativo';
+    const diasR = t.expiresAt ? Math.max(0,Math.ceil((t.expiresAt-now)/86400000)) : null;
+    const baseUrl = document.getElementById('g-url').value.trim() || DEFAULT_URL;
+    const url = baseUrl.endsWith('/') ? baseUrl+'?t='+id : baseUrl+'?t='+id;
+    return `
+      <div class="token-item">
+        <div class="token-item-header">
+          <div>
+            <div class="token-nome">${t.nome}</div>
+            <div class="token-key">${id.substring(0,20)}...</div>
+          </div>
+          <span class="status-pill ${statusClass}">${statusTxt}</span>
+        </div>
+        <div class="token-meta">
+          <span><i class="ti ti-calendar" style="font-size:12px"></i> ${t.expiresAt ? diasR+' dias rest.' : 'Sem limite'}</span>
+          <span><i class="ti ti-click" style="font-size:12px"></i> ${t.uses||0}${t.maxUses?'/'+t.maxUses:''} usos</span>
+          <span><i class="ti ti-clock" style="font-size:12px"></i> ${new Date(t.createdAt).toLocaleDateString('pt-BR')}</span>
+        </div>
+        <div class="token-actions">
+          <button class="act-btn" onclick="reexibirQR('${id}')"><i class="ti ti-qrcode"></i> Ver QR</button>
+          <button class="act-btn" onclick="renovar('${id}')"><i class="ti ti-refresh"></i> +30 dias</button>
+          <button class="act-btn danger" onclick="revogar('${id}')"><i class="ti ti-trash"></i> Revogar</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function reexibirQR(id){
+  const tokens = getTokens();
+  const t = tokens[id];
+  if(!t) return;
+  const baseUrl = document.getElementById('g-url').value.trim() || DEFAULT_URL;
+  const url = baseUrl.endsWith('/') ? baseUrl+'?t='+id : baseUrl+'?t='+id;
+  mostrarQR(id, t, url);
+}
+
+function renovar(id){
+  const tokens = getTokens();
+  if(!tokens[id]) return;
+  const now = Date.now();
+  const base = tokens[id].expiresAt ? Math.max(tokens[id].expiresAt, now) : now;
+  tokens[id].expiresAt = base + 30*86400000;
+  saveTokens(tokens);
+  renderAdmin();
+}
+
+function revogar(id){
+  if(!confirm('Revogar este acesso? O usuário não conseguirá mais entrar.')) return;
+  const tokens = getTokens();
+  delete tokens[id];
+  saveTokens(tokens);
+  renderAdmin();
+}
+</script>
+</body>
+</html>
