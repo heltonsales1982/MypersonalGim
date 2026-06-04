@@ -190,6 +190,19 @@ select option{background:var(--bg2)}
 .serie-historico-item .set-number{font-weight:600;color:var(--success)}
 .serie-historico-item .set-info{flex:1;color:var(--muted)}
 .serie-historico-item .set-check{color:var(--success);font-size:20px}
+
+/* ── SCANNER CORPORAL ── */
+.scanner-upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.upload-zone{aspect-ratio:1;border:2px dashed var(--border);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:border-color 0.2s;background:var(--bg3);position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(--accent)}
+.upload-zone i{font-size:24px;color:var(--muted)}
+.upload-zone span{font-size:12px;color:var(--muted)}
+.upload-zone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.analysis-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.analysis-stat{background:var(--bg3);border-radius:var(--r-sm);padding:1rem;text-align:center}
+.analysis-stat .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.analysis-stat .stat-value{font-size:1.4rem;font-family:var(--font-head);font-weight:700;color:var(--accent);margin-top:4px}
+.analysis-notes{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:1rem;padding:1rem;background:var(--bg3);border-radius:var(--r-sm)}
 </style>
 </head>
 <body>
@@ -525,6 +538,62 @@ select option{background:var(--bg2)}
         <button class="btn-accent" onclick="salvarJejumSono()">Salvar</button>
       </div>
     </div>
+
+    <!-- SCANNER CORPORAL -->
+    <div class="page" id="pg-scanner">
+      <h2 class="page-title"><i class="ti ti-camera"></i> Scanner Corporal IA</h2>
+      <p class="page-sub">Análise de fotos para estimar composição corporal</p>
+
+      <div class="card">
+        <h3>📷 Upload de Fotos</h3>
+        <div class="scanner-upload-grid">
+          <div class="upload-zone" onclick="document.getElementById('photo-frente').click()">
+            <i class="ti ti-camera"></i>
+            <span>Frente</span>
+            <input type="file" id="photo-frente" accept="image/*" style="display:none" onchange="previewPhoto(this, 'preview-frente')">
+            <img id="preview-frente" style="display:none">
+          </div>
+          <div class="upload-zone" onclick="document.getElementById('photo-lado').click()">
+            <i class="ti ti-camera"></i>
+            <span>Lado</span>
+            <input type="file" id="photo-lado" accept="image/*" style="display:none" onchange="previewPhoto(this, 'preview-lado')">
+            <img id="preview-lado" style="display:none">
+          </div>
+          <div class="upload-zone" onclick="document.getElementById('photo-costas').click()">
+            <i class="ti ti-camera"></i>
+            <span>Costas</span>
+            <input type="file" id="photo-costas" accept="image/*" style="display:none" onchange="previewPhoto(this, 'preview-costas')">
+            <img id="preview-costas" style="display:none">
+          </div>
+        </div>
+        <button class="btn-accent" onclick="analyzePhotos()">Analisar com IA</button>
+      </div>
+
+      <div class="card" id="analysis-result" style="display:none">
+        <h3>📊 Análise IA</h3>
+        <div class="analysis-stats">
+          <div class="analysis-stat">
+            <span class="stat-label">Gordura Corporal</span>
+            <span class="stat-value" id="bf-percent">--%</span>
+          </div>
+          <div class="analysis-stat">
+            <span class="stat-label">Massa Magra</span>
+            <span class="stat-value" id="lean-mass">-- kg</span>
+          </div>
+          <div class="analysis-stat">
+            <span class="stat-label">Comparação (mês anterior)</span>
+            <span class="stat-value" id="comparison">--</span>
+          </div>
+        </div>
+        <div class="analysis-notes" id="analysis-notes"></div>
+        <button class="btn-main" onclick="saveAnalysis()">Salvar Análise</button>
+      </div>
+
+      <div class="section-label">Histórico de Análises</div>
+      <div class="card" id="analysis-history">
+        <div class="empty"><i class="ti ti-history"></i>Nenhuma análise ainda</div>
+      </div>
+    </div>
   </div>
   <nav class="nav">
     <button class="nav-btn active" onclick="goPage('home',0)"><i class="ti ti-home"></i>Início</button>
@@ -532,8 +601,9 @@ select option{background:var(--bg2)}
     <button class="nav-btn" onclick="goPage('log',2)"><i class="ti ti-plus-circle"></i>Log</button>
     <button class="nav-btn" onclick="goPage('ev',3)"><i class="ti ti-chart-line"></i>Evolução</button>
     <button class="nav-btn" onclick="goPage('ia',4)"><i class="ti ti-robot"></i>IA</button>
-    <button class="nav-btn" onclick="goPage('features',5)"><i class="ti ti-crown"></i>Features</button>
-    <button class="nav-btn" onclick="goPage('perfil',6)"><i class="ti ti-user"></i>Perfil</button>
+    <button class="nav-btn" onclick="goPage('scanner',5)"><i class="ti ti-camera"></i>Scanner</button>
+    <button class="nav-btn" onclick="goPage('features',6)"><i class="ti ti-crown"></i>Features</button>
+    <button class="nav-btn" onclick="goPage('perfil',7)"><i class="ti ti-user"></i>Perfil</button>
   </nav>
 </div>
 
@@ -964,6 +1034,7 @@ function bootApp(session){
   loadMedidas();
   loadMetas();
   loadJejumSono();
+  loadAnalysisHistory();
 }
 
 // ══════════════════════════════════════════════
@@ -2076,6 +2147,224 @@ function addMsg(txt,who){
   return d;
 }
 function scrollChat(){ const c=document.getElementById('chat-msgs'); c.scrollTop=c.scrollHeight; }
+
+// ══════════════════════════════════════════════
+// SCANNER CORPORAL IA
+// ══════════════════════════════════════════════
+let currentAnalysis = null;
+
+function previewPhoto(input, previewId){
+  const file = input.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const preview = document.getElementById(previewId);
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+async function analyzePhotos(){
+  const photoFrente = document.getElementById('photo-frente').files[0];
+  const photoLado = document.getElementById('photo-lado').files[0];
+  const photoCostas = document.getElementById('photo-costas').files[0];
+
+  if(!photoFrente && !photoLado && !photoCostas){
+    alert('Selecione pelo menos uma foto para análise');
+    return;
+  }
+
+  const perfil = await getUserProfile();
+  const medidas = await getUserMedidas();
+
+  let prompt = 'Analise as fotos do corpo e estime:\n';
+  prompt += '1. Percentual de gordura corporal (BF%)\n';
+  prompt += '2. Massa magra em kg\n';
+  prompt += '3. Observações sobre composição corporal\n';
+  prompt += '4. Sugestões para melhoria\n\n';
+
+  if(perfil){
+    prompt += `Dados do usuário:\n`;
+    prompt += `- Peso: ${perfil.peso}kg\n`;
+    prompt += `- Altura: ${perfil.altura}cm\n`;
+    prompt += `- Objetivo: ${perfil.pesoObjetivo}kg\n`;
+  }
+
+  if(medidas){
+    prompt += `\nMedidas corporais:\n`;
+    prompt += `- Cintura: ${medidas.cintura}cm\n`;
+    prompt += `- Peito: ${medidas.peito}cm\n`;
+    prompt += `- Braço: ${medidas.bracoDir}cm\n`;
+    prompt += `- Coxa: ${medidas.coxaDir}cm\n`;
+  }
+
+  try{
+    const btn = document.querySelector('#pg-scanner .btn-accent');
+    btn.disabled = true;
+    btn.textContent = 'Analisando...';
+
+    // Converter fotos para base64
+    const photos = [];
+    if(photoFrente) photos.push(await fileToBase64(photoFrente));
+    if(photoLado) photos.push(await fileToBase64(photoLado));
+    if(photoCostas) photos.push(await fileToBase64(photoCostas));
+
+    // Chamar API da Anthropic para análise
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{
+        'Content-Type':'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        system:'Você é um especialista em análise de composição corporal através de fotos. Forneça estimativas realistas baseadas nas imagens e dados fornecidos. Responda em português brasileiro.',
+        messages:[{
+          role:'user',
+          content:[
+            {type:'text',text:prompt},
+            ...photos.map(p => ({type:'image',source:{type:'base64',media_type:'image/jpeg',data:p.split(',')[1]}}))
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const aiResponse = data.content?.[0]?.text||'Não foi possível analisar as fotos.';
+
+    // Extrair dados da resposta
+    const bfMatch = aiResponse.match(/(\d+\.?\d*)%/);
+    const massMatch = aiResponse.match(/massa magra[:\s]*(\d+\.?\d*)\s*kg/i);
+
+    currentAnalysis = {
+      bfPercent: bfMatch ? parseFloat(bfMatch[1]) : null,
+      leanMass: massMatch ? parseFloat(massMatch[1]) : null,
+      notes: aiResponse,
+      photos: photos,
+      date: Date.now()
+    };
+
+    // Mostrar resultados
+    document.getElementById('bf-percent').textContent = currentAnalysis.bfPercent ? currentAnalysis.bfPercent + '%' : '--';
+    document.getElementById('lean-mass').textContent = currentAnalysis.leanMass ? currentAnalysis.leanMass + ' kg' : '-- kg';
+    document.getElementById('analysis-notes').textContent = currentAnalysis.notes;
+
+    // Buscar análise anterior para comparação
+    const previousAnalysis = await getPreviousAnalysis();
+    if(previousAnalysis && previousAnalysis.bfPercent){
+      const diff = currentAnalysis.bfPercent - previousAnalysis.bfPercent;
+      const diffText = diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`;
+      document.getElementById('comparison').textContent = diffText;
+      document.getElementById('comparison').style.color = diff < 0 ? 'var(--success)' : 'var(--danger)';
+    } else {
+      document.getElementById('comparison').textContent = 'Primeira análise';
+    }
+
+    document.getElementById('analysis-result').style.display = 'block';
+
+    btn.disabled = false;
+    btn.textContent = 'Analisar com IA';
+
+  } catch(e){
+    console.error('Erro na análise:', e);
+    alert('Erro ao analisar fotos. Verifique sua conexão e tente novamente.');
+    const btn = document.querySelector('#pg-scanner .btn-accent');
+    btn.disabled = false;
+    btn.textContent = 'Analisar com IA';
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function getPreviousAnalysis(){
+  try {
+    const session = getUserSession();
+    if(!session) return null;
+    const snapshot = await firebase.database().ref('gymai_body_scanner/' + session.tokenKey).limitToLast(2).once('value');
+    const analyses = snapshot.val();
+    if(!analyses) return null;
+
+    const analysisArray = Object.values(analyses).sort((a, b) => b.date - a.date);
+    return analysisArray.length > 1 ? analysisArray[1] : null;
+  } catch(e) {
+    console.error('Erro ao buscar análise anterior:', e);
+    return null;
+  }
+}
+
+async function saveAnalysis(){
+  if(!currentAnalysis){
+    alert('Nenhuma análise para salvar');
+    return;
+  }
+
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const analysisId = 'analysis_' + Date.now();
+    await firebase.database().ref('gymai_body_scanner/' + session.tokenKey + '/' + analysisId).set(currentAnalysis);
+
+    alert('Análise salva com sucesso!');
+    loadAnalysisHistory();
+
+    // Limpar formulário
+    document.getElementById('analysis-result').style.display = 'none';
+    document.getElementById('photo-frente').value = '';
+    document.getElementById('photo-lado').value = '';
+    document.getElementById('photo-costas').value = '';
+    document.getElementById('preview-frente').style.display = 'none';
+    document.getElementById('preview-lado').style.display = 'none';
+    document.getElementById('preview-costas').style.display = 'none';
+    currentAnalysis = null;
+
+  } catch(e) {
+    console.error('Erro ao salvar análise:', e);
+    alert('Erro ao salvar análise');
+  }
+}
+
+async function loadAnalysisHistory(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const snapshot = await firebase.database().ref('gymai_body_scanner/' + session.tokenKey).once('value');
+    const analyses = snapshot.val();
+
+    if(!analyses){
+      document.getElementById('analysis-history').innerHTML = '<div class="empty"><i class="ti ti-history"></i>Nenhuma análise ainda</div>';
+      return;
+    }
+
+    const analysisArray = Object.values(analyses).sort((a, b) => b.date - a.date);
+
+    const historyHtml = analysisArray.map(a => `
+      <div class="log-row">
+        <div>
+          <div class="log-nome">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
+          <div class="log-sub">BF: ${a.bfPercent}% | Massa Magra: ${a.leanMass}kg</div>
+        </div>
+        <div class="log-carga">${a.bfPercent}%</div>
+      </div>
+    `).join('');
+
+    document.getElementById('analysis-history').innerHTML = historyHtml;
+
+  } catch(e) {
+    console.error('Erro ao carregar histórico:', e);
+  }
+}
 </script>
 </body>
 </html>
