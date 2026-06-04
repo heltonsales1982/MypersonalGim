@@ -1097,6 +1097,7 @@ function bootApp(session){
   loadJejumSono();
   loadAnalysisHistory();
   calculatePerformanceScore();
+  loadDiasFeitos();
 }
 
 // ══════════════════════════════════════════════
@@ -1142,7 +1143,35 @@ function goPage(pg, idx){
 // HOME
 // ══════════════════════════════════════════════
 const DIAS_LABEL = ['D','S','T','Q','Q','S','S'];
-const DIAS_FEITOS = [1,2,4,5];
+let DIAS_FEITOS = [];
+async function loadDiasFeitos(){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const snapshot = await firebase.database().ref('gymai_dias_treino/' + session.tokenKey).once('value');
+    const dias = snapshot.val();
+    if(dias){
+      DIAS_FEITOS = dias;
+    }
+  } catch(e) {
+    console.error('Erro ao carregar dias de treino:', e);
+  }
+}
+async function salvarDiaTreino(dia){
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    if(!DIAS_FEITOS.includes(dia)){
+      DIAS_FEITOS.push(dia);
+      await firebase.database().ref('gymai_dias_treino/' + session.tokenKey).set(DIAS_FEITOS);
+      renderDias();
+    }
+  } catch(e) {
+    console.error('Erro ao salvar dia de treino:', e);
+  }
+}
 function renderDias(){
   const hoje = new Date().getDay();
   document.getElementById('dia-grid').innerHTML = DIAS_LABEL.map((d,i)=>{
@@ -1240,6 +1269,10 @@ function registrar(){
   });
   renderLog();
   updateStats();
+
+  // Marcar dia como treino feito
+  const hoje = new Date().getDay();
+  salvarDiaTreino(hoje);
 }
 function renderLog(){
   const el = document.getElementById('log-hoje');
