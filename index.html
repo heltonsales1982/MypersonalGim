@@ -422,6 +422,24 @@ select option{background:var(--bg2)}
         </div>
         <button class="btn-accent" onclick="saveMetas()">Salvar Metas</button>
       </div>
+
+      <!-- OBJETIVO DE TREINO -->
+      <div class="card">
+        <h3><i class="ti ti-bolt"></i> Objetivo de Treino</h3>
+        <div class="field-group">
+          <label>Selecione seu objetivo</label>
+          <select id="objetivo-treino">
+            <option value="">Selecione</option>
+            <option value="massa">Ganho de massa</option>
+            <option value="peso">Perda de peso</option>
+            <option value="tonificacao">Tonificação</option>
+            <option value="gordura">Queima de gordura</option>
+            <option value="performance">Alta performance</option>
+            <option value="manutencao">Manutenção</option>
+          </select>
+        </div>
+        <button class="btn-accent" onclick="gerarTreino()">Gerar Treino Personalizado</button>
+      </div>
     </div>
   </div>
   <nav class="nav">
@@ -925,12 +943,50 @@ const FICHAS = [
   {id:'C',nome:'Treino C',foco:'Pernas',ex:['Agachamento','Leg press','Cadeira extensora','Cadeira flexora','Panturrilha','Stiff'],grupos:['Quadríceps','Posterior','Glúteo'],min:60},
 ];
 function renderTreinos(){
+  const session = getUserSession();
+  if(session){
+    firebase.database().ref('gymai_treinos/' + session.tokenKey).once('value', (snapshot) => {
+      const treinoPersonalizado = snapshot.val();
+      if(treinoPersonalizado){
+        renderTreinoPersonalizado(treinoPersonalizado);
+        return;
+      }
+      renderTreinosPadroes();
+    }, (error) => {
+      console.error('Erro ao buscar treino personalizado:', error);
+      renderTreinosPadroes();
+    });
+  } else {
+    renderTreinosPadroes();
+  }
+}
+
+function renderTreinosPadroes(){
   document.getElementById('treinos-list').innerHTML = FICHAS.map(f=>`
     <div class="card card-clickable" onclick="openTreino('${f.id}')">
       <div class="card-title">${f.nome} — ${f.foco}</div>
       <div class="card-sub">${f.ex.length} exercícios · ~${f.min} min</div>
       ${f.grupos.map(g=>`<span class="badge badge-lime">${g}</span>`).join('')}
     </div>`).join('');
+}
+
+function renderTreinoPersonalizado(treino){
+  document.getElementById('treinos-list').innerHTML = `
+    <div class="card">
+      <div class="card-title">${treino.nome}</div>
+      <div class="card-sub">Treino Personalizado — ${treino.descricao}</div>
+      <div style="margin:1rem 0">
+        <strong>Duração:</strong> ${treino.duracao} min | <strong>Descanso:</strong> ${treino.descanso}s | <strong>Intervalo:</strong> ${treino.intervalo}s
+      </div>
+      ${treino.exercicios.map(e => `
+        <div class="ex-row">
+          <span class="ex-nome">${e.nome}</span>
+          <span class="ex-meta">${e.series}x${e.repeticoes} | Descanso: ${e.descanso}s</span>
+        </div>
+      `).join('')}
+      <button class="btn-main" onclick="goPage('log',2)"><i class="ti ti-player-play"></i> Iniciar treino</button>
+    </div>
+  `;
 }
 function openTreino(id){
   const f = FICHAS.find(x=>x.id===id);
@@ -1367,6 +1423,139 @@ async function loadMetas(){
     }
   } catch(e) {
     console.error('Erro ao carregar metas:', e);
+  }
+}
+
+// ══════════════════════════════════════════════
+// GERAÇÃO DE TREINOS POR OBJETIVO
+// ══════════════════════════════════════════════
+const TREINOS_POR_OBJETIVO = {
+  massa: {
+    nome: 'Ganho de Massa',
+    descricao: 'Treino focado em hipertrofia muscular com cargas moderadas a altas',
+    duracao: 45,
+    descanso: 90,
+    intervalo: 120,
+    exercicios: [
+      {nome: 'Supino Reto', series: 4, repeticoes: '8-12', descanso: 90},
+      {nome: 'Agachamento Livre', series: 4, repeticoes: '8-12', descanso: 120},
+      {nome: 'Desenvolvimento Militar', series: 3, repeticoes: '10-12', descanso: 60},
+      {nome: 'Barra Fixa', series: 3, repeticoes: '8-10', descanso: 90},
+      {nome: 'Remada Curvada', series: 4, repeticoes: '10-12', descanso: 90},
+      {nome: 'HIIT: Burpees', series: 3, repeticoes: '30s', descanso: 30}
+    ]
+  },
+  peso: {
+    nome: 'Perda de Peso',
+    descricao: 'Treino combinado HIIT + musculação para queima calórica',
+    duracao: 40,
+    descanso: 60,
+    intervalo: 30,
+    exercicios: [
+      {nome: 'HIIT: Polichinelo', series: 3, repeticoes: '45s', descanso: 15},
+      {nome: 'Agachamento com Peso', series: 3, repeticoes: '15-20', descanso: 45},
+      {nome: 'HIIT: Mountain Climber', series: 3, repeticoes: '30s', descanso: 15},
+      {nome: 'Supino com Halteres', series: 3, repeticoes: '12-15', descanso: 45},
+      {nome: 'HIIT: Saltos', series: 3, repeticoes: '30s', descanso: 15},
+      {nome: 'Leg Press', series: 3, repeticoes: '15-20', descanso: 60}
+    ]
+  },
+  tonificacao: {
+    nome: 'Tonificação',
+    descricao: 'Treino com repetições moderadas para definição muscular',
+    duracao: 35,
+    descanso: 45,
+    intervalo: 60,
+    exercicios: [
+      {nome: 'Supino Inclinado', series: 3, repeticoes: '12-15', descanso: 45},
+      {nome: 'Agachamento Búlgaro', series: 3, repeticoes: '12-15', descanso: 45},
+      {nome: 'Elevação Lateral', series: 3, repeticoes: '15-20', descanso: 30},
+      {nome: 'HIIT: Corrida no lugar', series: 2, repeticoes: '45s', descanso: 15},
+      {nome: 'Abdominal Infra', series: 3, repeticoes: '15-20', descanso: 30},
+      {nome: 'Rosca Direta', series: 3, repeticoes: '12-15', descanso: 45}
+    ]
+  },
+  gordura: {
+    nome: 'Queima de Gordura',
+    descricao: 'Treino intenso com foco em HIIT para queima de gordura',
+    duracao: 30,
+    descanso: 30,
+    intervalo: 20,
+    exercicios: [
+      {nome: 'HIIT: Sprint', series: 4, repeticoes: '30s', descanso: 30},
+      {nome: 'Agachamento Pulo', series: 3, repeticoes: '15', descanso: 30},
+      {nome: 'HIIT: Burpees', series: 3, repeticoes: '30s', descanso: 20},
+      {nome: 'Flexão de Braço', series: 3, repeticoes: '15-20', descanso: 30},
+      {nome: 'HIIT: Corda', series: 3, repeticoes: '45s', descanso: 20},
+      {nome: 'Prancha', series: 3, repeticoes: '45s', descanso: 20}
+    ]
+  },
+  performance: {
+    nome: 'Alta Performance',
+    descricao: 'Treino avançado para atletas com alta intensidade',
+    duracao: 50,
+    descanso: 120,
+    intervalo: 90,
+    exercicios: [
+      {nome: 'Power Clean', series: 4, repeticoes: '6-8', descanso: 120},
+      {nome: 'Snatch', series: 3, repeticoes: '4-6', descanso: 180},
+      {nome: 'HIIT: Sprints', series: 5, repeticoes: '20s', descanso: 40},
+      {nome: 'Agachamento Pesado', series: 5, repeticoes: '5-8', descanso: 150},
+      {nome: 'Deadlift', series: 4, repeticoes: '5-8', descanso: 180},
+      {nome: 'HIIT: Box Jumps', series: 4, repeticoes: '10', descanso: 60}
+    ]
+  },
+  manutencao: {
+    nome: 'Manutenção',
+    descricao: 'Treino equilibrado para manter condicionamento físico',
+    duracao: 40,
+    descanso: 60,
+    intervalo: 60,
+    exercicios: [
+      {nome: 'Supino Reto', series: 3, repeticoes: '10-12', descanso: 60},
+      {nome: 'Agachamento', series: 3, repeticoes: '12-15', descanso: 60},
+      {nome: 'HIIT: Corda', series: 2, repeticoes: '30s', descanso: 30},
+      {nome: 'Remada', series: 3, repeticoes: '12-15', descanso: 60},
+      {nome: 'HIIT: Polichinelo', series: 2, repeticoes: '30s', descanso: 30},
+      {nome: 'Abdominal', series: 3, repeticoes: '15-20', descanso: 45}
+    ]
+  }
+};
+
+async function gerarTreino(){
+  const objetivo = document.getElementById('objetivo-treino').value;
+  if(!objetivo){
+    alert('Selecione um objetivo de treino');
+    return;
+  }
+
+  const treino = TREINOS_POR_OBJETIVO[objetivo];
+  if(!treino){
+    alert('Objetivo inválido');
+    return;
+  }
+
+  try {
+    const session = getUserSession();
+    if(!session) return;
+
+    const treinoData = {
+      objetivo,
+      nome: treino.nome,
+      descricao: treino.descricao,
+      duracao: treino.duracao,
+      descanso: treino.descanso,
+      intervalo: treino.intervalo,
+      exercicios: treino.exercicios,
+      createdAt: Date.now()
+    };
+
+    await firebase.database().ref('gymai_treinos/' + session.tokenKey).set(treinoData);
+    alert('Treino gerado com sucesso! Acesse a aba Treinos para ver seu treino personalizado.');
+    renderTreinos();
+  } catch(e) {
+    console.error('Erro ao gerar treino:', e);
+    alert('Erro ao gerar treino');
   }
 }
 function addMsg(txt,who){
