@@ -1264,6 +1264,42 @@ function qp(el){ document.getElementById('chat-in').value=el.textContent; sendIA
 let chatSessionId = null;
 let chatTimeout = null;
 
+async function getUserMedidas(){
+  try {
+    const session = getUserSession();
+    if(!session) return null;
+    const snapshot = await firebase.database().ref('gymai_medidas/' + session.tokenKey).once('value');
+    return snapshot.val();
+  } catch(e) {
+    console.error('Erro ao buscar medidas:', e);
+    return null;
+  }
+}
+
+async function getUserMetas(){
+  try {
+    const session = getUserSession();
+    if(!session) return null;
+    const snapshot = await firebase.database().ref('gymai_metas/' + session.tokenKey).once('value');
+    return snapshot.val();
+  } catch(e) {
+    console.error('Erro ao buscar metas:', e);
+    return null;
+  }
+}
+
+async function getUserJejumSono(){
+  try {
+    const session = getUserSession();
+    if(!session) return null;
+    const snapshot = await firebase.database().ref('gymai_jejum_sono/' + session.tokenKey).once('value');
+    return snapshot.val();
+  } catch(e) {
+    console.error('Erro ao buscar jejum e sono:', e);
+    return null;
+  }
+}
+
 async function sendIA(){
   const inp = document.getElementById('chat-in');
   const btn = document.getElementById('send-btn');
@@ -1275,7 +1311,6 @@ async function sendIA(){
   typing.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
   document.getElementById('chat-msgs').appendChild(typing);
   scrollChat();
-  const ctx = `Usuário: ${document.getElementById('user-nome-chip').textContent}. Séries hoje: ${logData.length}. Volume: ${Math.round(logData.reduce((a,l)=>a+(l.c*l.s*l.r),0))}kg.`;
 
   // Criar ou continuar sessão de chat
   if(!chatSessionId){
@@ -1293,6 +1328,31 @@ async function sendIA(){
   clearTimeout(chatTimeout);
   chatTimeout = setTimeout(endChatSession, 5 * 60 * 1000); // 5 minutos
 
+  // Buscar dados do usuário para contexto do Coach IA
+  const perfil = await getUserProfile();
+  const medidas = await getUserMedidas();
+  const metas = await getUserMetas();
+  const jejumSono = await getUserJejumSono();
+
+  const ctx = `Você é COACH IA do PeakOS, um personal trainer virtual expert em musculação e hipertrofia.
+  Dados do usuário:
+  - Nome: ${document.getElementById('user-nome-chip').textContent}
+  - Séries hoje: ${logData.length}
+  - Volume hoje: ${Math.round(logData.reduce((a,l)=>a+(l.c*l.s*l.r),0))}kg
+  ${perfil ? `- Peso: ${perfil.peso}kg, Altura: ${perfil.altura}cm, Objetivo: ${perfil.pesoObjetivo}kg` : ''}
+  ${medidas ? `- Cintura: ${medidas.cintura}cm, Peito: ${medidas.peito}cm` : ''}
+  ${metas ? `- Meta passos: ${metas.passos}, Meta água: ${metas.agua}ml` : ''}
+  ${jejumSono ? `- Jejum: ${jejumSono.jejumHoras}h, Sono: ${jejumSono.sonoHoras}h` : ''}
+
+  INSTRUÇÕES DO COACH:
+  - Analise os dados do usuário e dê recomendações personalizadas
+  - Se o usuário mencionar sono ruim, reduza volume ou intensidade
+  - Se o usuário mencionar dor, sugira exercícios alternativos
+  - Se o usuário mencionar fadiga, sugira descanso ou treino leve
+  - Seja proativo: sugira ajustes no treino, dieta ou recuperação
+  - Use dados reais do usuário para suas recomendações
+  - Responda em português brasileiro, máximo 3 parágrafos, objetivo e motivacional`;
+
   try{
     const res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{
@@ -1301,7 +1361,7 @@ async function sendIA(){
         'anthropic-version': '2023-06-01'
       },
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
-        system:`Você é personal trainer virtual expert em musculação e hipertrofia. Responda em português brasileiro de forma objetiva e motivacional. Máximo 3 parágrafos. ${ctx}`,
+        system: ctx,
         messages:[{role:'user',content:msg}]})
     });
     const data = await res.json();
