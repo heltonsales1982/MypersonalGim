@@ -2140,14 +2140,28 @@ async function getUserProfile(){
 async function savePerfil(){
   try {
     const session = getUserSession();
-    if(!session) return;
+    if(!session){
+      alert('Sessão não encontrada. Faça login novamente.');
+      return;
+    }
+
+    const sexo = document.getElementById('perfil-sexo').value;
+    const nascimento = document.getElementById('perfil-nascimento').value;
+    const peso = document.getElementById('perfil-peso').value;
+    const altura = document.getElementById('perfil-altura').value;
+    const pesoObjetivo = document.getElementById('perfil-peso-objetivo').value;
+
+    if(!sexo || !nascimento || !peso || !altura){
+      alert('Preencha todos os campos obrigatórios (sexo, data de nascimento, peso e altura).');
+      return;
+    }
 
     const perfil = {
-      sexo: document.getElementById('perfil-sexo').value,
-      nascimento: document.getElementById('perfil-nascimento').value,
-      peso: parseFloat(document.getElementById('perfil-peso').value) || 0,
-      altura: parseInt(document.getElementById('perfil-altura').value) || 0,
-      pesoObjetivo: parseFloat(document.getElementById('perfil-peso-objetivo').value) || 0,
+      sexo,
+      nascimento,
+      peso: parseFloat(peso),
+      altura: parseInt(altura),
+      pesoObjetivo: pesoObjetivo ? parseFloat(pesoObjetivo) : 0,
       updatedAt: Date.now()
     };
 
@@ -2155,7 +2169,7 @@ async function savePerfil(){
     alert('Perfil salvo com sucesso!');
   } catch(e) {
     console.error('Erro ao salvar perfil:', e);
-    alert('Erro ao salvar perfil');
+    alert('Erro ao salvar perfil: ' + e.message);
   }
 }
 
