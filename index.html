@@ -170,20 +170,16 @@ select option{background:var(--bg2)}
   <div class="access-logo">Gym<span>AI</span></div>
   <div class="access-sub">Seu personal trainer com inteligência artificial</div>
   <div class="access-card">
-    <h2 id="access-title">Criar sua conta</h2>
+    <h2 id="access-title">Solicitar acesso</h2>
     <div class="field">
       <label>Seu nome</label>
       <input type="text" id="field-nome" placeholder="Como quer ser chamado?">
     </div>
-    <div class="field" id="field-senha-wrap">
-      <label>Criar senha</label>
-      <input type="password" id="field-senha" placeholder="Mínimo 6 caracteres">
+    <div class="field">
+      <label>Celular (com DDD)</label>
+      <input type="tel" id="field-celular" placeholder="Ex: 11999999999">
     </div>
-    <div class="field" id="field-confirm-wrap">
-      <label>Confirmar senha</label>
-      <input type="password" id="field-confirm" placeholder="Repita a senha">
-    </div>
-    <button class="btn-accent" onclick="handleAccess()">Entrar no Gym AI</button>
+    <button class="btn-accent" onclick="requestAccess()">Solicitar cadastro</button>
     <div class="access-error" id="access-error"></div>
     <div class="token-hint" id="token-info"></div>
   </div>
@@ -328,9 +324,18 @@ select option{background:var(--bg2)}
 // CONTROLE DE ACESSO
 // ══════════════════════════════════════════════
 const ADMIN_KEY = 'gymai_admin_tokens'; // mesma chave usada pelo admin.html
+const REQUESTS_KEY = 'gymai_requests'; // chave para solicitações pendentes
 
 function getTokens(){
   try{ return JSON.parse(localStorage.getItem(ADMIN_KEY)||'{}'); }catch(e){return{};}
+}
+
+function getRequests(){
+  try{ return JSON.parse(localStorage.getItem(REQUESTS_KEY)||'{}'); }catch(e){return{};}
+}
+
+function saveRequests(reqs){
+  localStorage.setItem(REQUESTS_KEY, JSON.stringify(reqs));
 }
 
 function getUrlToken(){
@@ -378,7 +383,7 @@ window.addEventListener('load', ()=>{
     }
   }
 
-  // vem com token na URL
+  // vem com token na URL (para compatibilidade)
   if(urlToken){
     const check = validateToken(urlToken);
     if(!check.ok){
@@ -388,8 +393,8 @@ window.addEventListener('load', ()=>{
     // token válido: mostrar tela de criação de senha
     showAccessScreen(urlToken, null, check.token);
   } else {
-    // sem token e sem sessão: acesso negado
-    showAccessScreen(null, 'Você precisa de um QR code de acesso. Solicite ao administrador.');
+    // sem token e sem sessão: mostrar tela de solicitação
+    showAccessScreen();
   }
 });
 
@@ -399,54 +404,67 @@ function showAccessScreen(tk, errMsg, tokenData){
 
   if(errMsg){
     document.getElementById('access-title').textContent = 'Acesso negado';
-    document.getElementById('field-nome').closest('.field').style.display='none';
-    document.getElementById('field-senha-wrap').style.display='none';
-    document.getElementById('field-confirm-wrap').style.display='none';
-    document.querySelector('.btn-accent').style.display='none';
     document.getElementById('access-error').textContent = errMsg;
     document.getElementById('access-error').classList.add('show');
     return;
   }
 
-  if(tokenData){
-    document.getElementById('access-title').textContent = tokenData.nome
-      ? `Olá, ${tokenData.nome}! 👋` : 'Criar sua conta';
-    document.getElementById('field-nome').value = tokenData.nome || '';
-    const exp = tokenData.expiresAt ? new Date(tokenData.expiresAt).toLocaleDateString('pt-BR') : null;
-    const uses = tokenData.maxUses ? `${tokenData.uses||0}/${tokenData.maxUses} usos` : 'ilimitado';
-    document.getElementById('token-info').innerHTML =
-      `Token: <strong>${tk?.substring(0,8)}...</strong><br>
-       ${exp ? 'Válido até: <strong>'+exp+'</strong>' : ''} · Usos: <strong>${uses}</strong>`;
-  }
-
-  window._activeToken = tk;
-  window._activeTokenData = tokenData;
+  // Mostrar campos de solicitação por padrão
+  document.getElementById('access-title').textContent = 'Solicitar acesso';
+  document.getElementById('field-nome').closest('.field').style.display='block';
+  document.querySelector('.btn-accent').style.display='block';
+  document.getElementById('access-error').classList.remove('show');
+  document.getElementById('token-info').textContent = '';
 }
 
-function handleAccess(){
+function requestAccess(){
   const nome = document.getElementById('field-nome').value.trim();
-  const senha = document.getElementById('field-senha').value;
-  const confirm = document.getElementById('field-confirm').value;
+  const celular = document.getElementById('field-celular').value.trim();
   const errEl = document.getElementById('access-error');
   errEl.classList.remove('show');
 
   if(!nome){errEl.textContent='Digite seu nome.';errEl.classList.add('show');return;}
-  if(senha.length < 6){errEl.textContent='Senha mínima de 6 caracteres.';errEl.classList.add('show');return;}
-  if(senha !== confirm){errEl.textContent='As senhas não coincidem.';errEl.classList.add('show');return;}
+  if(!celular || celular.length < 10){errEl.textContent='Digite um celular válido (com DDD).';errEl.classList.add('show');return;}
 
-  const tk = window._activeToken;
-  const check = validateToken(tk);
-  if(!check.ok){errEl.textContent=check.msg;errEl.classList.add('show');return;}
+  // Verificar se já existe solicitação para este celular
+  const requests = getRequests();
+  const existing = Object.values(requests).find(r => r.celular === celular);
+  if(existing){
+    if(existing.status === 'pending'){
+      errEl.textContent='Você já tem uma solicitação pendente. Aguarde aprovação.';
+      errEl.classList.add('show');
+      return;
+    }
+    if(existing.status === 'approved'){
+      // Já aprovado, verificar se tem token
+      if(existing.tokenKey){
+        const check = validateToken(existing.tokenKey);
+        if(check.ok){
+          const session = {nome, tokenKey:existing.tokenKey, createdAt:Date.now()};
+          saveSession(session);
+          document.getElementById('access-screen').classList.remove('show');
+          bootApp(session);
+          return;
+        }
+      }
+    }
+  }
 
-  consumeTokenUse(tk);
-  const session = {nome, tokenKey:tk, createdAt:Date.now()};
-  saveSession(session);
+  // Criar nova solicitação
+  const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  requests[requestId] = {
+    nome,
+    celular,
+    status: 'pending',
+    createdAt: Date.now()
+  };
+  saveRequests(requests);
 
-  // salva senha hasheada simplificada (não usar em produção com dados sensíveis)
-  localStorage.setItem('gymai_pwd_'+tk, btoa(senha));
-
-  document.getElementById('access-screen').classList.remove('show');
-  bootApp(session);
+  document.getElementById('access-title').textContent = 'Solicitação enviada';
+  document.getElementById('field-nome').closest('.field').style.display='none';
+  document.getElementById('field-celular').closest('.field').style.display='none';
+  document.querySelector('.btn-accent').style.display='none';
+  document.getElementById('token-info').innerHTML = 'Sua solicitação foi enviada ao administrador.<br>Você receberá acesso assim que for aprovada.';
 }
 
 function bootApp(session){
