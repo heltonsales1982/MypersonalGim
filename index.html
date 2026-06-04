@@ -2548,21 +2548,24 @@ const DIETAS_POR_OBJETIVO = {
 };
 
 async function gerarDieta(){
-  const objetivo = document.getElementById('objetivo-dieta').value;
-  if(!objetivo){
-    alert('Selecione um objetivo para a dieta');
-    return;
-  }
-
-  const dieta = DIETAS_POR_OBJETIVO[objetivo];
-  if(!dieta){
-    alert('Objetivo inválido');
-    return;
-  }
-
   try {
+    const objetivo = document.getElementById('objetivo-dieta').value;
+    if(!objetivo){
+      alert('Selecione um objetivo para a dieta');
+      return;
+    }
+
+    const dieta = DIETAS_POR_OBJETIVO[objetivo];
+    if(!dieta){
+      alert('Objetivo inválido');
+      return;
+    }
+
     const session = getUserSession();
-    if(!session) return;
+    if(!session){
+      alert('Sessão não encontrada. Faça login novamente.');
+      return;
+    }
 
     const dietaData = {
       objetivo,
@@ -2577,7 +2580,7 @@ async function gerarDieta(){
     alert('Plano alimentar gerado com sucesso!');
   } catch(e) {
     console.error('Erro ao gerar dieta:', e);
-    alert('Erro ao gerar dieta');
+    alert('Erro ao gerar dieta: ' + e.message);
   }
 }
 
