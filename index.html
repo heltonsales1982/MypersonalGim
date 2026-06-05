@@ -780,10 +780,9 @@ const firebaseConfig = {
 };
 
 // ══════════════════════════════════════════════
-// CONFIGURAÇÃO IA (ANTHROPIC)
+// CONFIGURAÇÃO IA (GROQ)
 // ══════════════════════════════════════════════
-// Substitua com sua chave de API da Anthropic
-const ANTHROPIC_API_KEY = "SUA_CHAVE_API_ANTHROPIC";
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "SUA_CHAVE_API_GROQ";
 
 // ══════════════════════════════════════════════
 // CONFIGURAÇÃO FEATURES (MÓDULOS PAGOS)
@@ -2012,19 +2011,23 @@ async function sendIA(){
   - Responda em português brasileiro, máximo 3 parágrafos, objetivo e motivacional`;
 
   try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{
         'Content-Type':'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${GROQ_API_KEY}`
       },
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
-        system: ctx,
-        messages:[{role:'user',content:msg}]})
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:1000,
+        messages:[{
+          role:'system',
+          content:ctx
+        },{
+          role:'user',
+          content:msg
+        }]})
     });
     const data = await res.json();
     typing.remove();
-    const aiResponse = data.content?.[0]?.text||'Não consegui resposta. Tente novamente.';
+    const aiResponse = data.choices?.[0]?.message?.content||'Não consegui resposta. Tente novamente.';
     addMsg(aiResponse,'ai');
 
     // Salvar mensagens na sessão
@@ -2924,28 +2927,26 @@ async function analyzePhotos(){
     if(photoCostas) photos.push(await fileToBase64(photoCostas));
 
     // Chamar API da Anthropic para análise
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{
         'Content-Type':'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${GROQ_API_KEY}`
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'llama-3.3-70b-versatile',
         max_tokens:1500,
-        system:'Você é um especialista em análise de composição corporal através de fotos. Forneça estimativas realistas baseadas nas imagens e dados fornecidos. Responda em português brasileiro.',
         messages:[{
+          role:'system',
+          content:'Você é um especialista em análise de composição corporal através de fotos. Forneça estimativas realistas baseadas nas imagens e dados fornecidos. Responda em português brasileiro.'
+        },{
           role:'user',
-          content:[
-            {type:'text',text:prompt},
-            ...photos.map(p => ({type:'image',source:{type:'base64',media_type:'image/jpeg',data:p.split(',')[1]}}))
-          ]
+          content:prompt
         }]
       })
     });
 
     const data = await res.json();
-    const aiResponse = data.content?.[0]?.text||'Não foi possível analisar as fotos.';
+    const aiResponse = data.choices?.[0]?.message?.content||'Não foi possível analisar as fotos.';
 
     // Extrair dados da resposta
     const bfMatch = aiResponse.match(/(\d+\.?\d*)%/);
@@ -3313,22 +3314,26 @@ async function gerarMetasInteligentes(){
     prompt += `6. Tempo de treino (min)\n\n`;
     prompt += `Responda apenas com os valores numéricos, um por linha, no formato: "Categoria: Valor".`;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{
         'Content-Type':'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${GROQ_API_KEY}`
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'llama-3.3-70b-versatile',
         max_tokens:500,
-        system:'Você é um especialista em metas de fitness e nutrição. Gere metas realistas baseadas nos dados do usuário.',
-        messages:[{role:'user',content:prompt}]
+        messages:[{
+          role:'system',
+          content:'Você é um especialista em metas de fitness e nutrição. Gere metas realistas baseadas nos dados do usuário.'
+        },{
+          role:'user',
+          content:prompt
+        }]
       })
     });
 
     const data = await res.json();
-    const aiResponse = data.content?.[0]?.text||'Não foi possível gerar metas.';
+    const aiResponse = data.choices?.[0]?.message?.content||'Não foi possível gerar metas.';
 
     // Extrair metas da resposta
     const metas = {
